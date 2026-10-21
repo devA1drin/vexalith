@@ -54,3 +54,7 @@ models--*/
 *.key
 *.pem
 secrets/
+
+# Agent tooling installed by Vercel integrations
+.agents/
+skills-lock.json
