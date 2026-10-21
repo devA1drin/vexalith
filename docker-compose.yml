@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ct
+      POSTGRES_PASSWORD: ct
+      POSTGRES_DB: critical_thinking
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ct -d critical_thinking"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://ct:ct@postgres:5432/critical_thinking
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.x.ai/v1}
+      LLM_MODEL: ${LLM_MODEL:-grok-4.7}
+      # Prefer XAI_API_KEY; LLM_API_KEY also accepted by the app
+      XAI_API_KEY: ${XAI_API_KEY:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      HF_ENABLED: ${HF_ENABLED:-true}
+      CORS_ORIGINS: http://localhost:3000,http://frontend:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

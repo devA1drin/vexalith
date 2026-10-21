@@ -1,0 +1,56 @@
+# Dependencies & build
+node_modules/
+.next/
+out/
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+
+# Env & secrets
+.env
+.env.local
+.env.*.local
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage/
+
+# ML caches
+.cache/
+*.pt
+*.bin
+models--*/
+
+# Misc
+*.log
+.turbo/
+
+# Databases (local SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# Vercel
+.vercel
+.env*
+!.env.example
+
+# Secrets
+*.key
+*.pem
+secrets/
