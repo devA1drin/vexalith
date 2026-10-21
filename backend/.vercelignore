@@ -8,3 +8,5 @@ Dockerfile
 .env.local
 .env*
 .vercel
+.agents
+skills-lock.json
