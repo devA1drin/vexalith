@@ -1,36 +1,27 @@
 /**
- * Thin client for the FastAPI backend.
- * Base URL comes from NEXT_PUBLIC_API_URL (default localhost:8000).
+ * Browser client. All calls go to the same-origin proxy (/api/backend/*),
+ * which attaches a short-lived backend JWT derived from the Auth.js session.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export type Language = "python" | "javascript";
 
-export type FallacyFinding = {
-  name: string;
-  explanation: string;
-  evidence_span?: string | null;
-  confidence: number;
-};
-
-export type ReasoningGap = {
-  description: string;
-  how_to_improve: string;
-};
+export type Finding = { name: string; explanation: string; evidence_span?: string | null; confidence: number };
+export type ReasoningGap = { description: string; how_to_improve: string };
 
 export type FeedbackPayload = {
-  fallacies: FallacyFinding[];
-  reasoning_gaps: ReasoningGap[];
-  domain_scores: Record<string, number>;
-  suggestions: string[];
+  verdict: "correct" | "partially_correct" | "incorrect";
+  correctness_score: number;
+  reasoning_score: number;
   overall_score: number;
+  strengths: string[];
+  missed_concepts: string[];
+  misconceptions: Finding[];
+  reasoning_gaps: ReasoningGap[];
+  suggestions: string[];
+  domain_scores: Record<string, number>;
+  reference_answer?: string | null;
   raw_explanation: string;
   provider_used: string;
-};
-
-export type User = {
-  id: number;
-  display_name: string;
-  created_at: string;
 };
 
 export type Question = {
@@ -38,84 +29,74 @@ export type Question = {
   domain_slug: string;
   domain_name: string;
   difficulty: string;
+  language: Language;
   title: string;
-  scenario: string;
+  code: string;
   prompt: string;
 };
 
-export type ResponseOut = {
-  id: number;
-  user_id: number;
-  question_id: number;
-  answer_text: string;
-  created_at: string;
-  feedback: FeedbackPayload;
-};
-
-export type DomainProgress = {
-  domain_slug: string;
-  domain_name: string;
-  mastery: number;
-  attempts: number;
-};
-
+export type ResponseOut = { id: number; question_id: number; answer_text: string; created_at: string; feedback: FeedbackPayload };
+export type DomainProgress = { domain_slug: string; domain_name: string; mastery: number; attempts: number };
 export type ProgressOut = {
   user_id: number;
   display_name: string;
   domains: DomainProgress[];
   total_responses: number;
+  total_skips: number;
   average_mastery: number;
 };
 
+export type FeedbackCategory = "bug" | "feature_request" | "question_content" | "other";
+export type MyFeedback = { id: number; rating: number; category: FeedbackCategory; message: string; page_context: string | null; created_at: string };
+export type PublicFeedback = {
+  id: number;
+  author_name: string;
+  author_avatar_url: string | null;
+  rating: number;
+  category: FeedbackCategory;
+  message: string;
+  created_at: string;
+};
+
+export class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message);
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`/api/backend${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
+    cache: "no-store",
+    headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
   });
   if (!res.ok) {
-    let detail = res.statusText;
+    let detail: unknown = res.statusText;
     try {
       const body = await res.json();
-      detail = body.detail || JSON.stringify(body);
+      detail = body.detail ?? body;
     } catch {
       /* ignore */
     }
-    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    if (Array.isArray(detail)) detail = detail.map((d) => d?.msg ?? JSON.stringify(d)).join("; ");
+    throw new ApiError(typeof detail === "string" ? detail : JSON.stringify(detail), res.status);
   }
   return res.json() as Promise<T>;
 }
 
 export const api = {
-  createUser: (display_name: string) =>
-    request<User>("/api/users", {
+  nextQuestion: (language: Language, exclude: number[] = []) =>
+    request<Question>(`/questions/next?language=${language}${exclude.length ? `&exclude=${exclude.join(",")}` : ""}`),
+  skip: (questionId: number, language: Language) =>
+    request<{ skipped_question_id: number; next_question: Question }>(`/questions/${questionId}/skip?language=${language}`, {
       method: "POST",
-      body: JSON.stringify({ display_name }),
+      body: "{}",
     }),
-
-  getUser: (id: number) => request<User>(`/api/users/${id}`),
-
-  nextQuestion: (user_id: number) =>
-    request<Question>(`/api/questions/next?user_id=${user_id}`),
-
-  submitResponse: (user_id: number, question_id: number, answer_text: string) =>
-    request<ResponseOut>("/api/responses", {
-      method: "POST",
-      body: JSON.stringify({ user_id, question_id, answer_text }),
-    }),
-
-  progress: (user_id: number) => request<ProgressOut>(`/api/progress/${user_id}`),
-
-  health: () =>
-    request<{
-      status: string;
-      llm_configured: boolean;
-      hf_available: boolean;
-      database: string;
-      details: Record<string, unknown>;
-    }>("/api/health"),
+  submitResponse: (question_id: number, answer_text: string) =>
+    request<ResponseOut>("/responses", { method: "POST", body: JSON.stringify({ question_id, answer_text }) }),
+  progress: () => request<ProgressOut>("/progress"),
+  submitFeedback: (body: { rating: number; category: FeedbackCategory; message: string; page_context?: string | null }) =>
+    request<MyFeedback>("/feedback", { method: "POST", body: JSON.stringify(body) }),
+  myFeedback: () => request<MyFeedback[]>("/feedback/mine"),
+  recentFeedback: () => request<PublicFeedback[]>("/feedback/recent"),
 };
-
-export { API_URL };

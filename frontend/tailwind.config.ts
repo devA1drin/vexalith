@@ -1,36 +1,34 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       colors: {
+        // Graphite neutrals (warm-neutral, not blue-tinted)
         ink: {
-          50: "#f4f7fb",
-          100: "#e8eef6",
-          200: "#cddceb",
-          300: "#a0bfd9",
-          400: "#6e9bc1",
-          500: "#4d7ca7",
-          600: "#3b628b",
-          700: "#314f70",
-          800: "#2b435e",
-          900: "#273950",
-          950: "#1a2534",
+          50: "#f2f1ec",
+          100: "#e4e3dd",
+          200: "#c9c8c1",
+          300: "#a5a49d",
+          400: "#85847f",
+          500: "#66665f",
+          600: "#4a4a46",
+          700: "#323331",
+          800: "#222322",
+          900: "#161716",
+          950: "#0c0d0c",
         },
-        accent: {
-          DEFAULT: "#e8a838",
-          soft: "#f6d89a",
-        },
+        // One sharp accent: electric lime. "signal" is reserved for errors/limits.
+        accent: { DEFAULT: "#c8f031", soft: "#dcf77a", dim: "#8fae17" },
+        signal: { DEFAULT: "#ff5b2e", soft: "#ff9a7a" },
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        display: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "var(--font-sans)", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
       },
+      borderRadius: { DEFAULT: "2px", md: "3px", lg: "4px", xl: "4px", "2xl": "4px" },
     },
   },
   plugins: [],

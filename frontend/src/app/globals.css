@@ -4,17 +4,131 @@
 
 :root {
   color-scheme: dark;
+  --grid: rgba(242, 241, 236, 0.045);
+  --lime: #c8f031;
+  --signal: #ff5b2e;
 }
 
 body {
-  @apply bg-ink-950 text-ink-100 antialiased min-h-screen;
+  @apply bg-ink-950 text-ink-100 antialiased min-h-screen font-sans;
+  /* blueprint grid: 24px minor / 120px major */
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(77, 124, 167, 0.25), transparent),
-    radial-gradient(ellipse 40% 30% at 100% 0%, rgba(232, 168, 56, 0.08), transparent);
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+    linear-gradient(rgba(242, 241, 236, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(242, 241, 236, 0.022) 1px, transparent 1px);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+  background-position: -1px -1px;
+  overflow-x: clip;
 }
 
-@layer utilities {
-  .prose-scenario {
-    @apply whitespace-pre-wrap text-ink-200 leading-relaxed;
+::selection { background: var(--lime); color: #0c0d0c; }
+
+:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+
+@layer components {
+  .card { @apply border border-ink-700 bg-ink-900; }
+  .panel { @apply border border-ink-700 bg-ink-950; }
+  .btn-primary {
+    @apply relative inline-flex items-center justify-center gap-2 overflow-hidden border border-accent bg-accent px-4 py-2 font-mono text-[13px] font-semibold uppercase tracking-wider text-ink-950 transition-[transform,background-color] duration-150 hover:bg-accent-soft active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40;
   }
+  .btn-ghost {
+    @apply relative inline-flex items-center justify-center gap-2 border border-ink-600 bg-transparent px-3 py-1.5 font-mono text-[12px] uppercase tracking-wider text-ink-200 transition-colors duration-150 hover:border-accent hover:text-accent active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .chip { @apply inline-flex items-center border border-ink-700 px-2 py-0.5 font-mono text-[11px] uppercase tracking-wider text-ink-300; }
+  .label { @apply font-mono text-[11px] uppercase tracking-[0.14em] text-ink-400; }
+  .input {
+    @apply w-full border border-ink-700 bg-ink-950 px-3 py-2 text-sm text-ink-50 outline-none transition-colors placeholder:text-ink-500 focus:border-accent disabled:opacity-60;
+  }
+  .text-accent-hl { @apply text-accent; }
+}
+
+/* --- Button sweep: a lime "signal" passes through on hover --- */
+.btn-primary::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-101%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+}
+.btn-primary:hover::after { transform: translateX(101%); transition: transform .5s ease; }
+.btn-arrow { transition: transform .15s ease; }
+.btn-primary:hover .btn-arrow, .btn-ghost:hover .btn-arrow { transform: translateX(3px); }
+
+/* ---------- HERO: "Build Logic." compiles in, block by block ---------- */
+.compile-char { position: relative; display: inline-block; opacity: 0; animation: vx-char-in .01s linear forwards; animation-delay: calc(var(--i) * 55ms + 200ms); }
+.compile-char::after {
+  content: ""; position: absolute; inset: 8% -1px 6% -1px; background: var(--lime);
+  transform-origin: right; animation: vx-block-out .22s cubic-bezier(.7,0,.3,1) forwards;
+  animation-delay: calc(var(--i) * 55ms + 260ms);
+}
+@keyframes vx-char-in { to { opacity: 1; } }
+@keyframes vx-block-out { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+.compile-caret { display: inline-block; width: .5ch; height: .82em; margin-left: .06em; background: var(--lime); vertical-align: -0.04em; animation: vx-blink 1s steps(1) infinite; }
+@keyframes vx-blink { 50% { opacity: 0; } }
+
+/* ---------- HERO: "Break Limits." breaks through the boundary ---------- */
+.limit-zone { position: relative; }
+.limit-line { position: absolute; top: -6%; bottom: -6%; left: var(--limit, 78%); width: 1px; }
+.limit-line > i { position: absolute; left: 0; width: 1px; background: var(--signal); height: 50%; }
+.limit-line > i:first-child { top: 0; animation: vx-crack-up .5s cubic-bezier(.2,.8,.2,1) forwards 1.75s; }
+.limit-line > i:last-child { bottom: 0; animation: vx-crack-down .5s cubic-bezier(.2,.8,.2,1) forwards 1.75s; }
+.limit-tag { position: absolute; top: -1.9em; left: calc(var(--limit, 78%) + 6px); white-space: nowrap; animation: vx-fade-out .3s forwards 1.8s; }
+@keyframes vx-crack-up { to { transform: translate(-10px, -22%) rotate(-9deg); opacity: .0; } }
+@keyframes vx-crack-down { to { transform: translate(12px, 22%) rotate(11deg); opacity: .0; } }
+@keyframes vx-fade-out { to { opacity: 0; } }
+
+.break-text { display: inline-block; clip-path: inset(0 calc(100% - var(--limit, 78%)) 0 0); animation: vx-unclip .45s cubic-bezier(.2,.9,.1,1) forwards 1.7s; }
+@keyframes vx-unclip { 0% { clip-path: inset(0 calc(100% - var(--limit, 78%)) 0 0); transform: translateX(0); } 40% { transform: translateX(6px) skewX(-6deg); } 100% { clip-path: inset(0 -20% 0 0); transform: none; } }
+.break-text { opacity: 0; animation: vx-show .2s forwards 1.1s, vx-unclip .45s cubic-bezier(.2,.9,.1,1) forwards 1.7s; }
+@keyframes vx-show { to { opacity: 1; } }
+
+.shard { position: absolute; left: var(--limit, 78%); top: 50%; width: 6px; height: 6px; background: var(--lime); opacity: 0; animation: vx-shard .7s cubic-bezier(.1,.7,.2,1) forwards 1.78s; }
+@keyframes vx-shard { 0% { opacity: 1; transform: translate(0,0) rotate(0); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--r)); } }
+
+/* overflow bar: a progress bar that exceeds its container */
+.overflow-track { position: relative; height: 6px; border: 1px solid #4a4a46; }
+.overflow-fill { position: absolute; left: 0; top: -1px; bottom: -1px; width: 0; background: var(--lime); animation: vx-fill 1.6s cubic-bezier(.6,0,.2,1) forwards .5s; }
+@keyframes vx-fill { 0% { width: 0; } 70% { width: 100%; } 100% { width: 127%; } }
+.overflow-count::after { content: "100%"; animation: vx-count 1.6s steps(1) forwards .5s; }
+@keyframes vx-count { 0% { content: "000%"; } 20% { content: "031%"; } 40% { content: "064%"; } 60% { content: "092%"; } 70% { content: "100%"; } 85% { content: "114%"; } 100% { content: "127%"; } }
+
+/* ---------- circuit traces: pulses travel along logic paths ---------- */
+.trace { fill: none; stroke: rgba(242,241,236,.09); stroke-width: 1; }
+.trace-pulse { fill: none; stroke: var(--lime); stroke-width: 1.5; stroke-dasharray: 26 600; stroke-dashoffset: 626; animation: vx-pulse var(--d, 6s) linear infinite; animation-delay: var(--delay, 0s); opacity: .7; }
+@keyframes vx-pulse { to { stroke-dashoffset: 0; } }
+.gate { fill: #0c0d0c; stroke: rgba(242,241,236,.18); }
+.gate-on { animation: vx-gate var(--d, 6s) steps(1) infinite; animation-delay: var(--delay, 0s); }
+@keyframes vx-gate { 0%, 80% { stroke: rgba(242,241,236,.18); } 85%, 95% { stroke: var(--lime); } }
+
+/* ---------- trace-runner: execution cursor stepping through code ---------- */
+.exec-line { position: absolute; left: 0; right: 0; height: 1.5rem; background: rgba(200,240,49,.08); border-left: 2px solid var(--lime); animation: vx-exec 8s steps(1) infinite; }
+@keyframes vx-exec { 0% { top: 6rem; } 12.5% { top: 0; } 25% { top: 1.5rem; } 37.5% { top: 3rem; } 50% { top: 7.5rem; } 62.5% { top: 0; } 75% { top: 1.5rem; } 87.5% { top: 3rem; } }
+.out-1 { animation: vx-out1 8s steps(1) infinite; }
+.out-2 { animation: vx-out2 8s steps(1) infinite; }
+@keyframes vx-out1 { 0%, 37.4% { opacity: 0; } 37.5%, 100% { opacity: 1; } }
+@keyframes vx-out2 { 0%, 87.4% { opacity: 0; } 87.5%, 100% { opacity: 1; } }
+
+/* ---------- scroll reveal ---------- */
+.reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s cubic-bezier(.2,.8,.2,1); transition-delay: var(--rd, 0ms); }
+.reveal.is-visible { opacity: 1; transform: none; }
+
+/* ---------- question card transitions ---------- */
+.q-enter { animation: vx-q-in .32s cubic-bezier(.2,.8,.2,1) both; }
+.q-leave { animation: vx-q-out .2s ease-in both; pointer-events: none; }
+@keyframes vx-q-in { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes vx-q-out { to { opacity: .15; transform: translateX(-28px); } }
+
+/* ---------- bars that count up ---------- */
+.bar-grow { transform-origin: left; animation: vx-grow .9s cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--rd, 0ms); }
+@keyframes vx-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.rise { animation: vx-rise .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: var(--rd, 0ms); }
+@keyframes vx-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; transition-delay: 0ms !important; }
+  .compile-caret { animation: none; }
+  .trace-pulse, .exec-line { display: none; }
+  .out-1, .out-2 { opacity: 1 !important; }
+  .reveal { opacity: 1; transform: none; }
+  .overflow-fill { width: 127%; }
+  .overflow-count::after { content: "127%"; }
 }

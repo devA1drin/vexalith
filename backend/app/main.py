@@ -1,23 +1,23 @@
 """
-FastAPI application entrypoint.
+Vexalith API — FastAPI entrypoint.
 
-Startup: create tables + seed domains/questions.
+Startup (import time, serverless-friendly): migrate schema (version check +
+safe reset), create tables, and upsert seed domains/questions.
 """
 
 from __future__ import annotations
 
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import progress, questions, responses, users
-from app.ai.provider import hf_runtime_available
+from app.api import feedback, meta, progress, questions, responses, users
 from app.config import get_settings
-from app.db.base import Base
 from app.db.session import SessionLocal, engine
+from app.models.models import Question
 from app.schemas.schemas import HealthOut
-from app.services.question_bank import seed_domains_and_questions
+from app.services.question_bank import migrate_schema, seed_domains_and_questions
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,11 +25,12 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 app = FastAPI(
-    title=settings.app_name,
-    version="0.1.0",
+    title="Vexalith API",
+    version="0.2.0",
     description=(
-        "Adaptive critical-thinking practice: scenario questions, fallacy-aware "
-        "feedback (xAI Grok / HF / heuristic), and mastery-based next-item selection."
+        "Vexalith — Build Logic. Break Limits. Adaptive programming critical-thinking coach: "
+        "code tracing, debugging, complexity, edge cases, code review and data structures, "
+        "with explainable feedback (xAI Grok or offline rubric grader) and Elo-based mastery."
     ),
 )
 
@@ -37,35 +38,27 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_origin_regex=settings.cors_origin_regex or None,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
-app.include_router(users.router, prefix="/api")
-app.include_router(questions.router, prefix="/api")
-app.include_router(responses.router, prefix="/api")
-app.include_router(progress.router, prefix="/api")
-
+for r in (users.router, questions.router, responses.router, progress.router, feedback.router, meta.router):
+    app.include_router(r, prefix="/api")
 
 _db_ready = False
 
 
 def init_db() -> None:
-    """Create tables and seed domains/questions (idempotent).
-
-    Runs at import time so it also works on serverless platforms (Vercel)
-    where ASGI lifespan/startup events may not fire, and again lazily on the
-    first request if the import-time attempt failed (e.g. a cold-start race).
-    """
+    """Migrate + seed (idempotent). Runs at import and lazily on first request if needed."""
     global _db_ready
     if _db_ready:
         return
-    Base.metadata.create_all(bind=engine)
+    migrate_schema(engine)
     db = SessionLocal()
     try:
         seed_domains_and_questions(db)
-        logger.info("Database ready; domains & seed questions ensured.")
+        logger.info("Database ready; programming domains & questions ensured.")
     except Exception:
         db.rollback()
         raise
@@ -81,45 +74,42 @@ except Exception:  # pragma: no cover - retried lazily per request
 
 
 @app.middleware("http")
-async def ensure_db(request, call_next):
+async def ensure_db_and_no_cache(request: Request, call_next):
     if not _db_ready:
         try:
             init_db()
         except Exception:
             logger.exception("init_db retry failed")
-    return await call_next(request)
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    init_db()
+    response = await call_next(request)
+    # Personalized/adaptive API responses must never be cached by browsers or CDNs.
+    if request.url.path.startswith("/api/") and request.url.path != "/api/health":
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/api/health", response_model=HealthOut)
 def health() -> HealthOut:
-    # Clear cached provider so health reflects current env.
     from app.ai.provider import get_ai_provider
 
     get_ai_provider.cache_clear()
     provider = get_ai_provider()
     db_kind = "sqlite" if settings.database_url.startswith("sqlite") else "postgres"
+    count = None
+    try:
+        with SessionLocal() as db:
+            count = db.query(Question).count()
+    except Exception:  # noqa: BLE001
+        logger.exception("health: question count failed")
     return HealthOut(
         status="ok",
         llm_configured=settings.llm_configured,
-        hf_available=hf_runtime_available(),
+        auth_configured=bool(settings.backend_jwt_secret),
         database=db_kind,
-        details={
-            "provider": provider.name,
-            "llm_model": settings.llm_model if settings.llm_configured else None,
-            "llm_base_url": settings.llm_base_url if settings.llm_configured else None,
-        },
+        question_count=count,
+        details={"provider": provider.name, "llm_model": settings.llm_model if settings.llm_configured else None},
     )
 
 
 @app.get("/")
 def root() -> dict:
-    return {
-        "app": settings.app_name,
-        "docs": "/docs",
-        "health": "/api/health",
-    }
+    return {"app": "Vexalith API", "tagline": "Build Logic. Break Limits.", "docs": "/docs", "health": "/api/health"}

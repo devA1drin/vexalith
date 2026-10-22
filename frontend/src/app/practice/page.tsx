@@ -1,139 +1,197 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { api, type Question, type FeedbackPayload } from "@/lib/api";
-import { loadUser } from "@/lib/storage";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, ApiError, type FeedbackPayload, type Language, type Question } from "@/lib/api";
+import { CodeBlock } from "@/components/CodeBlock";
 import { FeedbackCard } from "@/components/FeedbackCard";
 
+const LANG_KEY = "vexalith_language";
+const LANGS: { id: Language; label: string }[] = [
+  { id: "python", label: "Python" },
+  { id: "javascript", label: "JavaScript" },
+];
+const LEVEL: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3 };
+
 export default function PracticePage() {
-  const [userId, setUserId] = useState<number | null>(null);
+  const [language, setLanguage] = useState<Language>("python");
   const [question, setQuestion] = useState<Question | null>(null);
   const [answer, setAnswer] = useState("");
   const [feedback, setFeedback] = useState<FeedbackPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loadingQ, setLoadingQ] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [busy, setBusy] = useState<null | "load" | "skip" | "submit">(null);
+  const [leaving, setLeaving] = useState(false);
+  const [count, setCount] = useState(0);
+  const recent = useRef<number[]>([]);
+  const initialized = useRef(false);
 
-  useEffect(() => {
-    const u = loadUser();
-    setUserId(u?.id ?? null);
-  }, []);
-
-  const loadQuestion = useCallback(async (uid: number) => {
-    setLoadingQ(true);
-    setError(null);
-    setFeedback(null);
+  const show = useCallback((q: Question) => {
+    setQuestion(q);
     setAnswer("");
-    try {
-      const q = await api.nextQuestion(uid);
-      setQuestion(q);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load question");
-    } finally {
-      setLoadingQ(false);
-    }
+    setFeedback(null);
+    setLeaving(false);
+    setCount((c) => c + 1);
+    recent.current = [q.id, ...recent.current.filter((id) => id !== q.id)].slice(0, 8);
   }, []);
 
+  const handleError = (e: unknown, fallback: string) => {
+    setLeaving(false);
+    if (e instanceof ApiError && e.status === 401) {
+      window.location.href = "/login?callbackUrl=/practice";
+      return;
+    }
+    setError(e instanceof Error ? e.message : fallback);
+  };
+
+  const loadNext = useCallback(
+    async (lang: Language) => {
+      setBusy("load");
+      setError(null);
+      setLeaving(true);
+      try {
+        show(await api.nextQuestion(lang, recent.current));
+      } catch (e) {
+        handleError(e, "Failed to load question");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [show],
+  );
+
   useEffect(() => {
-    if (userId != null) loadQuestion(userId);
-  }, [userId, loadQuestion]);
+    if (initialized.current) return;
+    initialized.current = true;
+    const saved = localStorage.getItem(LANG_KEY);
+    const lang: Language = saved === "javascript" ? "javascript" : "python";
+    setLanguage(lang);
+    loadNext(lang);
+  }, [loadNext]);
+
+  async function onSkip() {
+    if (!question) return;
+    setBusy("skip");
+    setError(null);
+    setLeaving(true);
+    try {
+      const res = await api.skip(question.id, language);
+      show(res.next_question);
+    } catch (e) {
+      handleError(e, "Skip failed");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function onSubmit() {
-    if (!userId || !question) return;
-    setSubmitting(true);
+    if (!question) return;
+    setBusy("submit");
     setError(null);
     try {
-      const res = await api.submitResponse(userId, question.id, answer);
+      const res = await api.submitResponse(question.id, answer);
       setFeedback(res.feedback);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Submit failed");
+      handleError(e, "Submit failed");
     } finally {
-      setSubmitting(false);
+      setBusy(null);
     }
   }
 
-  if (userId == null) {
-    return (
-      <div className="rounded-xl border border-ink-700 bg-ink-900/50 p-8 text-center space-y-3">
-        <p className="text-ink-300">Create a learner profile on the home page first.</p>
-        <Link href="/" className="text-accent hover:underline">
-          ← Home
-        </Link>
-      </div>
-    );
+  function onLanguage(lang: Language) {
+    if (lang === language) return;
+    setLanguage(lang);
+    localStorage.setItem(LANG_KEY, lang);
+    loadNext(lang);
   }
+
+  const level = question ? LEVEL[question.difficulty] ?? 1 : 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-ink-50">Practice</h1>
-        <button
-          type="button"
-          onClick={() => userId && loadQuestion(userId)}
-          disabled={loadingQ}
-          className="rounded-lg border border-ink-600 px-3 py-1.5 text-sm text-ink-200 hover:bg-ink-800 disabled:opacity-40"
-        >
-          {loadingQ ? "Loading…" : "Skip / next"}
-        </button>
-      </div>
-
-      {error && (
-        <p className="rounded-lg border border-rose-800 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
-          {error}
-        </p>
-      )}
-
-      {question && (
-        <article className="space-y-4 rounded-xl border border-ink-700 bg-ink-900/50 p-6">
-          <div className="flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full bg-ink-800 px-2.5 py-1 text-ink-200">
-              {question.domain_name}
-            </span>
-            <span className="rounded-full bg-ink-800 px-2.5 py-1 capitalize text-accent-soft">
-              {question.difficulty}
-            </span>
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-700 pb-5">
+        <div>
+          <p className="label mb-2">01 · Practice{count > 0 && ` · drill ${String(count).padStart(2, "0")}`}</p>
+          <h1 className="font-display text-4xl font-bold tracking-tight text-ink-50">Reason it out.</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex border border-ink-700" role="radiogroup" aria-label="Language">
+            {LANGS.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                role="radio"
+                aria-checked={language === l.id}
+                onClick={() => onLanguage(l.id)}
+                disabled={busy !== null}
+                data-lang={l.id}
+                className={`px-3 py-1.5 font-mono text-[12px] uppercase tracking-wider transition-colors ${
+                  language === l.id ? "bg-accent text-ink-950" : "text-ink-300 hover:text-ink-50"
+                }`}
+              >
+                {l.label}
+              </button>
+            ))}
           </div>
-          <h2 className="text-xl font-medium text-ink-50">{question.title}</h2>
-          <div>
-            <h3 className="mb-1 text-xs uppercase tracking-wide text-ink-500">Scenario</h3>
-            <p className="prose-scenario">{question.scenario}</p>
-          </div>
-          <div>
-            <h3 className="mb-1 text-xs uppercase tracking-wide text-ink-500">Your task</h3>
-            <p className="text-ink-100 font-medium">{question.prompt}</p>
-          </div>
-
-          <label className="block space-y-2">
-            <span className="text-sm text-ink-300">Your answer</span>
-            <textarea
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              rows={8}
-              disabled={!!feedback}
-              placeholder="Write a reasoned analysis (at least a few sentences)…"
-              className="w-full rounded-lg border border-ink-600 bg-ink-950 px-3 py-2 text-sm text-ink-50 outline-none focus:border-accent disabled:opacity-60"
-            />
-          </label>
-
-          {!feedback ? (
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={answer.trim().length < 10 || submitting}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink-950 disabled:opacity-40 hover:brightness-110"
-            >
-              {submitting ? "Analyzing…" : "Submit for feedback"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => userId && loadQuestion(userId)}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-ink-950 hover:brightness-110"
-            >
-              Next question →
+          {!feedback && (
+            <button type="button" onClick={onSkip} disabled={!question || busy !== null} className="btn-ghost py-[7px]" data-testid="skip">
+              {busy === "skip" ? "Skipping…" : <>Skip <span className="btn-arrow">↷</span></>}
             </button>
           )}
+        </div>
+      </div>
+
+      {error && <p role="alert" className="border-l-2 border-signal pl-3 text-sm text-signal-soft">{error}</p>}
+
+      {!question && busy === "load" && <div className="card h-72 animate-pulse" />}
+
+      {question && (
+        <article
+          key={`${question.id}-${count}`}
+          className={`card ${leaving ? "q-leave" : "q-enter"}`}
+          data-question-id={question.id}
+          aria-busy={leaving}
+        >
+          <div className="flex flex-wrap items-center gap-2 border-b border-ink-700 px-4 py-3 sm:px-6">
+            <span className="chip text-ink-100">{question.domain_name}</span>
+            <span className="chip gap-1.5" title={question.difficulty}>
+              {[1, 2, 3].map((n) => <span key={n} className={`inline-block h-2 w-2 ${n <= level ? "bg-accent" : "bg-ink-700"}`} />)}
+              <span className="ml-1">{question.difficulty}</span>
+            </span>
+            <span className="label ml-auto">#{String(question.id).padStart(3, "0")}</span>
+          </div>
+          <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2">
+            <div className="min-w-0 space-y-4">
+              <h2 className="font-display text-2xl font-semibold leading-tight text-ink-50" data-testid="question-title">{question.title}</h2>
+              <CodeBlock code={question.code} language={question.language} />
+            </div>
+            <div className="flex min-w-0 flex-col gap-4">
+              <p className="border-l-2 border-accent pl-4 text-[17px] font-medium leading-relaxed text-ink-50">{question.prompt}</p>
+              <label className="flex flex-1 flex-col gap-2">
+                <span className="label">Your explanation</span>
+                <textarea
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  rows={8}
+                  disabled={!!feedback || busy === "submit"}
+                  placeholder={"Answer first, then justify it.\ne.g. \"Line 5 prints … because …\""}
+                  className="input min-h-[11rem] flex-1 font-mono text-[13px] leading-6"
+                />
+              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                {!feedback ? (
+                  <button type="button" onClick={onSubmit} disabled={answer.trim().length < 10 || busy !== null} className="btn-primary" data-testid="submit">
+                    {busy === "submit" ? "Evaluating…" : <>Submit <span className="btn-arrow">→</span></>}
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => loadNext(language)} disabled={busy !== null} className="btn-primary" data-testid="next">
+                    {busy === "load" ? "Loading…" : <>Next question <span className="btn-arrow">→</span></>}
+                  </button>
+                )}
+                <span className="font-mono text-[11px] text-ink-500">
+                  {!feedback && (answer.trim().length < 10 ? `${answer.trim().length}/10 min` : `${answer.trim().length} chars`)}
+                </span>
+              </div>
+            </div>
+          </div>
         </article>
       )}
 

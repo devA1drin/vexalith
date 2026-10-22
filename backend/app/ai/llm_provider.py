@@ -1,51 +1,79 @@
 """
 OpenAI-compatible LLM provider — defaults to xAI Grok.
 
-Uses Chat Completions at {LLM_BASE_URL}/chat/completions with
-response_format={"type":"json_object"} for structured feedback JSON.
-See https://docs.x.ai/developers/model-capabilities/text/structured-outputs
+Chat Completions at {LLM_BASE_URL}/chat/completions with
+response_format={"type": "json_object"} for structured output.
+Any failure falls back to the offline rubric grader.
 """
 
 from __future__ import annotations
 
 import json
+import time
 import logging
 import re
 from typing import Any
 
 import httpx
 
-from app.ai.provider import AIProvider
+from app.ai.provider import AIProvider, QuestionContext
 from app.config import get_settings
-from app.schemas.schemas import FallacyFinding, FeedbackPayload, ReasoningGap
+from app.schemas.schemas import FeedbackPayload, Finding, ReasoningGap
 
 logger = logging.getLogger(__name__)
 
-FEEDBACK_SYSTEM = """You are an expert critical-thinking tutor.
-Analyze the student's free-text answer to a scenario-based question.
-Return ONLY valid JSON matching this schema (no markdown fences):
+FEEDBACK_SYSTEM = """You are Vexalith, a rigorous but encouraging programming tutor.
+A learner was shown a code snippet and a question (predict output, find a bug,
+analyse complexity, list edge cases, review design, or choose a data structure).
+Grade their free-text explanation for CORRECTNESS (is the technical claim right:
+exact output, real root cause, correct Big-O, relevant edge cases?) and
+REASONING (do they justify it by tracing the code / counting operations /
+explaining the mechanism?). Use the teacher rubric when provided, but judge the
+substance, not keywords. Quote the learner when pointing out a misconception.
+
+Return ONLY a JSON object (no markdown) with exactly these keys:
 {
-  "fallacies": [{"name": str, "explanation": str, "evidence_span": str|null, "confidence": 0-1}],
-  "reasoning_gaps": [{"description": str, "how_to_improve": str}],
-  "domain_scores": {"<domain_slug>": 0-1, ...},
-  "suggestions": [str],
-  "overall_score": 0-1,
-  "raw_explanation": str
+  "verdict": "correct" | "partially_correct" | "incorrect",
+  "correctness_score": number 0-1,
+  "reasoning_score": number 0-1,
+  "overall_score": number 0-1,          // ~0.7*correctness + 0.3*reasoning
+  "strengths": [string],                // what they got right
+  "missed_concepts": [string],          // important points they did not cover
+  "misconceptions": [{"name": string, "explanation": string, "evidence_span": string|null, "confidence": number 0-1}],
+  "reasoning_gaps": [{"description": string, "how_to_improve": string}],
+  "suggestions": [string],              // 1-4 concrete next steps
+  "reference_answer": string,           // concise model answer
+  "raw_explanation": string             // 1-3 sentence summary of the grade
 }
-Be specific, cite phrases from the answer when calling out fallacies, and be encouraging but rigorous.
-Common fallacies: ad_hominem, straw_man, false_dilemma, slippery_slope, circular_reasoning,
-hasty_generalization, appeal_to_authority, post_hoc, red_herring, bandwagon, anecdotal.
 """
 
-QUESTION_SYSTEM = """You are an expert curriculum designer for critical thinking.
-Generate ONE original practice scenario as JSON only (no markdown):
+QUESTION_SYSTEM = """You are a curriculum designer for programming critical thinking.
+Create ONE original practice item with a short, self-contained code snippet
+(5-20 lines) in the requested language. The question must require reasoning,
+not trivia. Return ONLY JSON (no markdown):
 {
-  "title": str,
-  "scenario": str (2-4 paragraphs of realistic context),
-  "prompt": str (open-ended question asking the student to analyze/argue),
-  "expected_signals": {"good_keywords": [str], "fallacy_traps": [str]}
+  "title": string,
+  "code": string,
+  "prompt": string,
+  "rubric": {
+    "concepts": [{"label": string, "keywords": [string], "weight": number}],
+    "misconceptions": [{"label": string, "keywords": [string], "explanation": string}],
+    "reference_answer": string
+  }
 }
+The first concept must be the core correct answer (e.g. the exact output or the root cause).
 """
+
+
+# Circuit breaker: after an auth/quota/timeout failure, skip the LLM for a while so
+# every request doesn't pay the failed round-trip before falling back.
+_COOLDOWN_SECONDS = 300
+_cooldown_until = 0.0
+
+
+def _trip(seconds: float = _COOLDOWN_SECONDS) -> None:
+    global _cooldown_until
+    _cooldown_until = time.monotonic() + seconds
 
 
 class LLMProvider(AIProvider):
@@ -56,90 +84,69 @@ class LLMProvider(AIProvider):
     def __init__(self) -> None:
         self.settings = get_settings()
 
-    def _headers(self) -> dict[str, str]:
-        return {
-            "Authorization": f"Bearer {self.settings.llm_api_key}",
-            "Content-Type": "application/json",
-        }
-
-    def _chat(self, system: str, user: str, *, temperature: float = 0.4) -> dict[str, Any]:
+    def _chat(self, system: str, user: str, *, temperature: float = 0.2) -> dict[str, Any]:
         url = self.settings.llm_base_url.rstrip("/") + "/chat/completions"
         payload = {
             "model": self.settings.llm_model,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "temperature": temperature,
-            # xAI supports json_object and json_schema structured outputs.
             "response_format": {"type": "json_object"},
         }
-        with httpx.Client(timeout=60.0) as client:
-            resp = client.post(url, headers=self._headers(), json=payload)
-            if resp.status_code >= 400:
-                # Surface provider message (e.g. xAI credits exhausted) without leaking secrets.
-                detail = resp.text[:500]
-                raise RuntimeError(f"LLM HTTP {resp.status_code}: {detail}")
-            data = resp.json()
-        content = data["choices"][0]["message"]["content"]
-        return _parse_json_content(content)
+        headers = {"Authorization": f"Bearer {self.settings.llm_api_key}", "Content-Type": "application/json"}
+        if time.monotonic() < _cooldown_until:
+            raise RuntimeError("LLM paused after recent failure")
+        try:
+            with httpx.Client(timeout=httpx.Timeout(20.0, connect=5.0)) as client:
+                resp = client.post(url, headers=headers, json=payload)
+        except httpx.TimeoutException:
+            _trip(60)
+            raise RuntimeError("LLM timeout") from None
+        if resp.status_code >= 400:
+            if resp.status_code in (401, 402, 403, 429):
+                _trip()
+                # Short, sanitized provider message (no secrets, no account ids).
+            raise RuntimeError(f"LLM HTTP {resp.status_code}")
+        data = resp.json()
+        return _parse_json_content(data["choices"][0]["message"]["content"])
 
-    def evaluate_response(
-        self,
-        *,
-        scenario: str,
-        prompt: str,
-        answer: str,
-        domain_slug: str,
-        expected_signals: dict | None = None,
-    ) -> FeedbackPayload:
+    def evaluate_response(self, *, question: QuestionContext, answer: str) -> FeedbackPayload:
         user_msg = (
-            f"Domain focus: {domain_slug}\n\n"
-            f"SCENARIO:\n{scenario}\n\n"
-            f"QUESTION:\n{prompt}\n\n"
-            f"STUDENT ANSWER:\n{answer}\n"
+            f"Domain: {question.domain_slug} | Difficulty: {question.difficulty} | Language: {question.language}\n"
+            f"Title: {question.title}\n\nCODE:\n```{question.language}\n{question.code}\n```\n\n"
+            f"QUESTION:\n{question.prompt}\n\nLEARNER ANSWER:\n{answer}\n"
         )
-        if expected_signals:
-            user_msg += f"\nTeacher signals (optional hints): {json.dumps(expected_signals)}\n"
-
+        if question.rubric:
+            user_msg += f"\nTEACHER RUBRIC (hidden from learner):\n{json.dumps(question.rubric)}\n"
         try:
             raw = self._chat(FEEDBACK_SYSTEM, user_msg)
-            return _to_feedback(raw, domain_slug=domain_slug, provider="llm")
+            fb = _to_feedback(raw, domain_slug=question.domain_slug)
+            if not fb.reference_answer and question.rubric:
+                fb.reference_answer = question.rubric.get("reference_answer")
+            return fb
         except Exception as exc:  # noqa: BLE001
-            logger.exception("LLM evaluate failed, falling back to heuristic: %s", exc)
-            from app.ai.heuristic import HeuristicProvider
+            logger.warning("LLM evaluate failed, falling back to heuristic: %s", exc)
+            from app.ai.heuristic import grade
 
-            fb = HeuristicProvider().evaluate_response(
-                scenario=scenario,
-                prompt=prompt,
-                answer=answer,
-                domain_slug=domain_slug,
-                expected_signals=expected_signals,
-            )
+            fb = grade(answer, question)
             fb.provider_used = "llm->heuristic"
-            fb.raw_explanation = f"LLM error ({exc}); used heuristic. " + fb.raw_explanation
+            fb.raw_explanation = "Graded with the offline rubric (model grader unavailable). " + fb.raw_explanation
             return fb
 
-    def generate_question(
-        self,
-        *,
-        domain_slug: str,
-        domain_name: str,
-        difficulty: str,
-    ) -> dict | None:
+    def generate_question(self, *, domain_slug: str, domain_name: str, difficulty: str, language: str) -> dict | None:
         user_msg = (
-            f"Create a {difficulty}-difficulty question targeting the skill domain "
-            f"'{domain_name}' (slug: {domain_slug})."
+            f"Create a {difficulty} {language} question for the skill domain '{domain_name}' (slug: {domain_slug})."
         )
         try:
-            return self._chat(QUESTION_SYSTEM, user_msg, temperature=0.8)
+            out = self._chat(QUESTION_SYSTEM, user_msg, temperature=0.8)
+            if not out.get("code") or not out.get("prompt"):
+                return None
+            return out
         except Exception as exc:  # noqa: BLE001
             logger.warning("LLM question generation failed: %s", exc)
             return None
 
 
 def _parse_json_content(content: str) -> dict[str, Any]:
-    """Parse model output, tolerating accidental markdown fences."""
     text = content.strip()
     fence = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
     if fence:
@@ -147,34 +154,45 @@ def _parse_json_content(content: str) -> dict[str, Any]:
     return json.loads(text)
 
 
-def _to_feedback(raw: dict[str, Any], *, domain_slug: str, provider: str) -> FeedbackPayload:
-    fallacies = [
-        FallacyFinding(
-            name=str(f.get("name", "unknown")),
-            explanation=str(f.get("explanation", "")),
-            evidence_span=f.get("evidence_span"),
-            confidence=float(f.get("confidence", 0.5)),
-        )
-        for f in (raw.get("fallacies") or [])
-        if isinstance(f, dict)
-    ]
-    gaps = [
-        ReasoningGap(
-            description=str(g.get("description", "")),
-            how_to_improve=str(g.get("how_to_improve", "")),
-        )
-        for g in (raw.get("reasoning_gaps") or [])
-        if isinstance(g, dict)
-    ]
-    scores = raw.get("domain_scores") or {}
-    if domain_slug not in scores:
-        scores[domain_slug] = float(raw.get("overall_score", 0.5))
+def _f(v: Any, default: float = 0.5) -> float:
+    try:
+        return max(0.0, min(1.0, float(v)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_feedback(raw: dict[str, Any], *, domain_slug: str) -> FeedbackPayload:
+    verdict = raw.get("verdict")
+    if verdict not in {"correct", "partially_correct", "incorrect"}:
+        verdict = "partially_correct"
+    correctness = _f(raw.get("correctness_score"))
+    reasoning = _f(raw.get("reasoning_score"))
+    overall = _f(raw.get("overall_score"), 0.7 * correctness + 0.3 * reasoning)
     return FeedbackPayload(
-        fallacies=fallacies,
-        reasoning_gaps=gaps,
-        domain_scores={k: float(v) for k, v in scores.items()},
-        suggestions=[str(s) for s in (raw.get("suggestions") or [])],
-        overall_score=float(raw.get("overall_score", 0.5)),
+        verdict=verdict,
+        correctness_score=correctness,
+        reasoning_score=reasoning,
+        overall_score=overall,
+        strengths=[str(s) for s in (raw.get("strengths") or [])][:6],
+        missed_concepts=[str(s) for s in (raw.get("missed_concepts") or [])][:6],
+        misconceptions=[
+            Finding(
+                name=str(m.get("name", "misconception")),
+                explanation=str(m.get("explanation", "")),
+                evidence_span=m.get("evidence_span"),
+                confidence=_f(m.get("confidence")),
+            )
+            for m in (raw.get("misconceptions") or [])
+            if isinstance(m, dict)
+        ][:5],
+        reasoning_gaps=[
+            ReasoningGap(description=str(g.get("description", "")), how_to_improve=str(g.get("how_to_improve", "")))
+            for g in (raw.get("reasoning_gaps") or [])
+            if isinstance(g, dict)
+        ][:5],
+        suggestions=[str(s) for s in (raw.get("suggestions") or [])][:4],
+        domain_scores={domain_slug: overall},
+        reference_answer=(str(raw["reference_answer"]) if raw.get("reference_answer") else None),
         raw_explanation=str(raw.get("raw_explanation", "")),
-        provider_used=provider,
+        provider_used="llm",
     )
