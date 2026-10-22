@@ -2,6 +2,14 @@
 
 DOMAINS = [
     {
+        "slug": "fundamentals",
+        "name": "Fundamentals",
+        "description": (
+            "Start from zero: variables, types, operators, strings, conditionals, loops, functions, "
+            "lists and dictionaries, null values, errors; HTML/CSS basics; algorithms, binary and booleans."
+        ),
+    },
+    {
         "slug": "code_tracing",
         "name": "Code Tracing & Comprehension",
         "description": "Read code precisely and predict its output and state changes.",
@@ -61,4 +69,5 @@ LANGUAGES = [
 # Language-agnostic questions (logic puzzles, prose algorithm problems) use this
 # language tag and are eligible under every language selection.
 GENERAL = "general"
+FUNDAMENTALS = "fundamentals"
 LANGUAGE_SLUGS = [lang["slug"] for lang in LANGUAGES]
