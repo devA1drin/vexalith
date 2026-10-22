@@ -62,6 +62,15 @@ The app adapts to you. It gives you more questions on the skills you find hardes
 Once you have cleared Fundamentals, every topic opens up.
 Turn on **Focus: Fundamentals** on the practice page if you only want the basics.
 
+**Daily challenge.** Open **Daily** in the menu. There is one question a day, the same for everyone. It changes at midnight Manila time (Asia/Manila, UTC+8), and the language changes every day. Answer it to complete the day. Do it on consecutive days to build a **streak**; your current and best streak appear on the Daily and Progress pages.
+
+**Your progress page** shows:
+- how many questions you solved, your accuracy and your average score;
+- a chart of your score over the last 30 days, with how much you improved;
+- your mastery per skill and per language;
+- your recent answers;
+- your daily streak, plus how many questions you skipped and how many hints you used.
+
 **Recommended for you.** Your progress page (and the home page, once you are signed in) suggests what to do next:
 - your 3 weakest skills, each with a **Practise** button that opens questions on just that topic;
 - a few questions you haven't seen yet, at a level that suits you;
