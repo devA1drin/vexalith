@@ -55,8 +55,13 @@ There are 421 questions in total, including 69 for C++, 35 fill-in-the-missing-c
    - **Beginner**, **Intermediate** or **Advanced**: you only get questions at that level.
    Your choice is remembered in your browser. Skip and Next keep your language and level.
 3. **Answer in your own words.** Say what the code does and why.
+   You can write in **English, Filipino (Tagalog) or Taglish** (a mix of both), for example:
+   *"Nagpi-print siya ng 5 kasi copy lang ng value ang nakuha ng y."*
+   The grader checks your ideas, not your language, so the same explanation gets about the same score in any of the three.
+   Keep code (like `i < 5` or `acc.append(x)`) as you would type it.
    Stuck? Press **Show hint**. Every question has 3 hints, shown one at a time: first a way to approach it, then the key idea, then the point your answer must make. Each hint takes 10% off that answer's score (30% at most).
 4. **Read your feedback.** Right or wrong, you get an explanation: the key concept, a checklist of everything a full answer covers (ticked where you got it), any common mistake you made and why it's wrong, and the model answer. For fill-in-the-missing-code questions you also see the correct code.
+   If you answered in Filipino or Taglish, the feedback says so ("Tinanggap ang sagot mo sa Filipino") and its headings switch to Filipino. Use the **English / Filipino** switch on the feedback to choose; your browser remembers it. The rubric points and the model answer stay in English.
 
 The app adapts to you. It gives you more questions on the skills you find hardest, and harder questions as you improve.
 Once you have cleared Fundamentals, every topic opens up.
