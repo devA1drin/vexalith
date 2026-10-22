@@ -25,6 +25,9 @@ export type FeedbackPayload = {
   accepted_answers?: string[];
   hints_used?: number;
   hint_penalty?: number;
+  /** True when this answer completed today's daily challenge. */
+  daily_completed?: boolean;
+  daily_streak?: number;
   raw_explanation: string;
   provider_used: string;
 };
@@ -64,7 +67,40 @@ export type FundamentalsStatus = {
   min_answers: number;
   pass_average: number;
 };
-export type LanguageProgress = { language: string; attempts: number; average_score: number };
+export type LanguageProgress = { language: string; attempts: number; average_score: number; correct?: number; accuracy?: number };
+export type ProgressDay = { date: string; answers: number; correct: number; average_score: number | null };
+export type RecentAttempt = {
+  question_id: number;
+  title: string;
+  language: Language;
+  domain_name: string;
+  difficulty: string;
+  verdict: FeedbackPayload["verdict"];
+  score: number;
+  hints_used: number;
+  created_at: string;
+};
+export type DailyOut = {
+  date: string;
+  timezone: string;
+  resets_at: string;
+  question_id: number;
+  title: string;
+  language: Language;
+  domain_slug: string;
+  domain_name: string;
+  difficulty: string;
+  kind: string;
+};
+export type DailyMeOut = DailyOut & {
+  question: Question;
+  completed: boolean;
+  score: number | null;
+  current_streak: number;
+  best_streak: number;
+  total_completed: number;
+  last_days: { date: string; done: boolean; score: number | null }[];
+};
 export type ProgressOut = {
   user_id: number;
   display_name: string;
@@ -74,6 +110,19 @@ export type ProgressOut = {
   total_responses: number;
   total_skips: number;
   average_mastery: number;
+  questions_answered?: number;
+  questions_solved?: number;
+  correct_answers?: number;
+  accuracy?: number;
+  average_score?: number;
+  improvement?: number | null;
+  hints_used?: number;
+  history?: ProgressDay[];
+  recent?: RecentAttempt[];
+  current_streak?: number;
+  best_streak?: number;
+  daily_done_today?: boolean;
+  daily_completed?: number;
 };
 
 export type FeedbackCategory = "bug" | "feature_request" | "question_content" | "other";
@@ -137,6 +186,8 @@ export const api = {
   submitResponse: (question_id: number, answer_text: string) =>
     request<ResponseOut>("/responses", { method: "POST", body: JSON.stringify({ question_id, answer_text }) }),
   progress: () => request<ProgressOut>("/progress"),
+  daily: () => request<DailyOut>("/daily"),
+  dailyMe: () => request<DailyMeOut>("/daily/me"),
   hints: (questionId: number) => request<HintsOut>(`/questions/${questionId}/hints`),
   revealHint: (questionId: number) => request<HintsOut>(`/questions/${questionId}/hints`, { method: "POST", body: "{}" }),
   submitFeedback: (body: { rating: number; category: FeedbackCategory; message: string; page_context?: string | null }) =>
