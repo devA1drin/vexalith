@@ -21,6 +21,10 @@ export type FeedbackPayload = {
   suggestions: string[];
   domain_scores: Record<string, number>;
   reference_answer?: string | null;
+  key_points?: string[];
+  accepted_answers?: string[];
+  hints_used?: number;
+  hint_penalty?: number;
   raw_explanation: string;
   provider_used: string;
 };
@@ -36,7 +40,10 @@ export type Question = {
   prompt: string;
   /** "fill_blank": the snippet has a ____ blank and the learner supplies the missing code. */
   kind?: "explain" | "fill_blank";
+  hint_count?: number;
 };
+
+export type HintsOut = { question_id: number; revealed: string[]; hint_count: number; penalty_per_hint: number; penalty: number };
 
 export type ResponseOut = { id: number; question_id: number; answer_text: string; created_at: string; feedback: FeedbackPayload };
 export type DomainProgress = { domain_slug: string; domain_name: string; mastery: number; attempts: number };
@@ -113,6 +120,8 @@ export const api = {
   submitResponse: (question_id: number, answer_text: string) =>
     request<ResponseOut>("/responses", { method: "POST", body: JSON.stringify({ question_id, answer_text }) }),
   progress: () => request<ProgressOut>("/progress"),
+  hints: (questionId: number) => request<HintsOut>(`/questions/${questionId}/hints`),
+  revealHint: (questionId: number) => request<HintsOut>(`/questions/${questionId}/hints`, { method: "POST", body: "{}" }),
   submitFeedback: (body: { rating: number; category: FeedbackCategory; message: string; page_context?: string | null }) =>
     request<MyFeedback>("/feedback", { method: "POST", body: JSON.stringify(body) }),
   myFeedback: () => request<MyFeedback[]>("/feedback/mine"),

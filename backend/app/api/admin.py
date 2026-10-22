@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.session import get_db
-from app.models.models import Feedback, QuestionSkip, Response, SkillMastery, User, UserFeedback
+from app.models.models import Feedback, HintUsage, QuestionSkip, Response, SkillMastery, User, UserFeedback
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -49,6 +49,7 @@ def purge_users(body: PurgeRequest, db: Session = Depends(get_db)) -> dict:
             "skips": len(list(db.scalars(select(QuestionSkip.id).where(QuestionSkip.user_id == user.id)))),
             "masteries": len(list(db.scalars(select(SkillMastery.id).where(SkillMastery.user_id == user.id)))),
             "feedback_entries": len(list(db.scalars(select(UserFeedback.id).where(UserFeedback.user_id == user.id)))),
+            "hints": len(list(db.scalars(select(HintUsage.id).where(HintUsage.user_id == user.id)))),
         }
         if not body.dry_run:
             if resp_ids:
@@ -57,6 +58,7 @@ def purge_users(body: PurgeRequest, db: Session = Depends(get_db)) -> dict:
             db.execute(delete(QuestionSkip).where(QuestionSkip.user_id == user.id))
             db.execute(delete(SkillMastery).where(SkillMastery.user_id == user.id))
             db.execute(delete(UserFeedback).where(UserFeedback.user_id == user.id))
+            db.execute(delete(HintUsage).where(HintUsage.user_id == user.id))
             db.execute(delete(User).where(User.id == user.id))
         report.append({"identity": ident, "found": True, "name": user.display_name, **counts})
     if not body.dry_run:
