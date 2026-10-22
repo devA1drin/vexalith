@@ -258,7 +258,8 @@ def get_next_question(
     if fund_id is not None and fund_id in available:
         status = fundamentals_status(db, user)
         onboarding = not status.cleared and not status.experienced
-        if focus == FUNDAMENTALS or onboarding:
+        # An explicit topic wins over onboarding (the learner asked for it).
+        if focus == FUNDAMENTALS or topic == FUNDAMENTALS or (onboarding and not topic):
             dm_list = [m for m in dm_list if m.domain_id == fund_id] or dm_list
             avoid_domain_ids = None
             forced_level = level or fundamentals_level(status)
