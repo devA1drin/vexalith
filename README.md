@@ -37,7 +37,14 @@ It checks two things: whether your answer is right, and whether your reasoning m
 - **Algorithms**: classic problems such as searching and sorting.
 - **Logic problems**: true/false puzzles and reasoning.
 
-There are 359 questions in total, including 57 for C++.
+**Two kinds of questions**
+
+- **Explain it**: read the code and say what it does and why (most questions).
+- **Fill in the missing code**: part of the code is hidden behind a highlighted **?** slot. Type the line, expression, tag or property that belongs there. Equivalent answers count (spacing, quote style and a trailing `;` don't matter), so `i<3;` is as good as `i < 3`.
+
+There are also plenty of **loop** drills in every language: `for`, `while`, `do-while`, nested loops, `break` and `continue`, "what does this print?" and off-by-one bugs.
+
+There are 421 questions in total, including 69 for C++, 35 fill-in-the-missing-code questions and 27 extra loop drills.
 
 ## How it works
 

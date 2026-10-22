@@ -72,6 +72,7 @@ def _question_out(q: Question, domain: SkillDomain) -> QuestionOut:
         title=q.title,
         code=q.code,
         prompt=q.prompt,
+        kind=(q.rubric or {}).get("kind") or "explain",
     )
 
 

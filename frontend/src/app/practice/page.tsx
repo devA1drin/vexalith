@@ -125,6 +125,8 @@ export default function PracticePage() {
   }
 
   const level = question ? LEVEL[question.difficulty] ?? 1 : 0;
+  const isBlank = question?.kind === "fill_blank";
+  const minChars = isBlank ? 1 : 10;
 
   return (
     <div className="space-y-6">
@@ -198,6 +200,11 @@ export default function PracticePage() {
               {[1, 2, 3].map((n) => <span key={n} className={`inline-block h-2 w-2 ${n <= level ? "bg-accent" : "bg-ink-700"}`} />)}
               <span className="ml-1">{question.difficulty}</span>
             </span>
+            {isBlank && (
+              <span className="chip border-accent text-accent" data-testid="kind-fill-blank">
+                Missing code
+              </span>
+            )}
             <span className="label ml-auto">#{String(question.id).padStart(3, "0")}</span>
           </div>
           <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2">
@@ -208,19 +215,23 @@ export default function PracticePage() {
             <div className="flex min-w-0 flex-col gap-4">
               <p className="border-l-2 border-accent pl-4 text-[17px] font-medium leading-relaxed text-ink-50">{question.prompt}</p>
               <label className="flex flex-1 flex-col gap-2">
-                <span className="label">Your explanation</span>
+                <span className="label">{isBlank ? "The missing code (+ why, optional)" : "Your explanation"}</span>
                 <textarea
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
                   rows={8}
                   disabled={!!feedback || busy === "submit"}
-                  placeholder={"Answer first, then justify it.\ne.g. \"Line 5 prints … because …\""}
+                  placeholder={
+                    isBlank
+                      ? "Type the code that replaces the highlighted ? slot.\nThen, if you like, say why it fits."
+                      : "Answer first, then justify it.\ne.g. \"Line 5 prints … because …\""
+                  }
                   className="input min-h-[11rem] flex-1 font-mono text-[13px] leading-6"
                 />
               </label>
               <div className="flex flex-wrap items-center gap-3">
                 {!feedback ? (
-                  <button type="button" onClick={onSubmit} disabled={answer.trim().length < 10 || busy !== null} className="btn-primary" data-testid="submit">
+                  <button type="button" onClick={onSubmit} disabled={answer.trim().length < minChars || busy !== null} className="btn-primary" data-testid="submit">
                     {busy === "submit" ? "Evaluating…" : <>Submit <span className="btn-arrow">→</span></>}
                   </button>
                 ) : (
@@ -229,7 +240,7 @@ export default function PracticePage() {
                   </button>
                 )}
                 <span className="font-mono text-[11px] text-ink-500">
-                  {!feedback && (answer.trim().length < 10 ? `${answer.trim().length}/10 min` : `${answer.trim().length} chars`)}
+                  {!feedback && (answer.trim().length < minChars ? `${answer.trim().length}/${minChars} min` : `${answer.trim().length} chars`)}
                 </span>
               </div>
             </div>

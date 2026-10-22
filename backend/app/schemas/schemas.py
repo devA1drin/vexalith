@@ -34,6 +34,8 @@ class QuestionOut(BaseModel):
     title: str
     code: str
     prompt: str
+    # "explain" (free-text reasoning) or "fill_blank" (supply the code for the ____ blank).
+    kind: str = "explain"
 
 
 class SkipOut(BaseModel):
@@ -82,7 +84,9 @@ class FeedbackPayload(BaseModel):
 
 class ResponseCreate(BaseModel):
     question_id: int
-    answer_text: str = Field(..., min_length=10, max_length=10000)
+    # Explanations need >= 10 characters; fill-in-the-blank answers may be as short as "i++"
+    # (enforced per question kind in the endpoint).
+    answer_text: str = Field(..., min_length=1, max_length=10000)
 
 
 class ResponseOut(BaseModel):
