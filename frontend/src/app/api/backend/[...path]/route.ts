@@ -15,11 +15,13 @@ type Rule = { method: "GET" | "POST"; pattern: RegExp; public?: boolean };
 const RULES: Rule[] = [
   { method: "GET", pattern: /^me$/ },
   { method: "GET", pattern: /^questions\/next$/ },
+  { method: "GET", pattern: /^questions\/\d+$/ },
   { method: "POST", pattern: /^questions\/\d+\/skip$/ },
   { method: "GET", pattern: /^questions\/\d+\/hints$/ },
   { method: "POST", pattern: /^questions\/\d+\/hints$/ },
   { method: "POST", pattern: /^responses$/ },
   { method: "GET", pattern: /^progress$/ },
+  { method: "GET", pattern: /^recommendations$/ },
   { method: "POST", pattern: /^feedback$/ },
   { method: "GET", pattern: /^feedback\/mine$/ },
   { method: "GET", pattern: /^feedback\/recent$/, public: true },

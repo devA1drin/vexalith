@@ -48,6 +48,13 @@ export type HintsOut = { question_id: number; revealed: string[]; hint_count: nu
 export type ResponseOut = { id: number; question_id: number; answer_text: string; created_at: string; feedback: FeedbackPayload };
 export type DomainProgress = { domain_slug: string; domain_name: string; mastery: number; attempts: number };
 export type Focus = "fundamentals";
+/** "adaptive" lets the Elo engine pick the level; the others pin it. */
+export type Difficulty = "adaptive" | "beginner" | "intermediate" | "advanced";
+export const DIFFICULTY_IDS: Difficulty[] = ["adaptive", "beginner", "intermediate", "advanced"];
+export type PracticeOptions = { focus?: Focus | null; difficulty?: Difficulty; topic?: string | null };
+export type TopicTip = { domain_slug: string; domain_name: string; mastery: number; attempts: number; suggested_difficulty: string; reason: string };
+export type LanguageTip = { language: Language; name: string; attempts: number; average_score: number; reason: string };
+export type RecommendationsOut = { language: Language; headline: string; topics: TopicTip[]; languages: LanguageTip[]; next_questions: Question[] };
 export type FundamentalsStatus = {
   answers: number;
   strong_answers: number;
@@ -107,16 +114,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+function practiceQuery(language: Language, opts: PracticeOptions, exclude: number[] = []): string {
+  const q = new URLSearchParams({ language });
+  if (exclude.length) q.set("exclude", exclude.join(","));
+  if (opts.focus) q.set("focus", opts.focus);
+  if (opts.difficulty && opts.difficulty !== "adaptive") q.set("difficulty", opts.difficulty);
+  if (opts.topic) q.set("topic", opts.topic);
+  return q.toString();
+}
+
 export const api = {
-  nextQuestion: (language: Language, exclude: number[] = [], focus: Focus | null = null) =>
-    request<Question>(
-      `/questions/next?language=${language}${exclude.length ? `&exclude=${exclude.join(",")}` : ""}${focus ? `&focus=${focus}` : ""}`,
-    ),
-  skip: (questionId: number, language: Language, focus: Focus | null = null) =>
-    request<{ skipped_question_id: number; next_question: Question }>(`/questions/${questionId}/skip?language=${language}${focus ? `&focus=${focus}` : ""}`, {
+  nextQuestion: (language: Language, exclude: number[] = [], opts: PracticeOptions = {}) =>
+    request<Question>(`/questions/next?${practiceQuery(language, opts, exclude)}`),
+  skip: (questionId: number, language: Language, opts: PracticeOptions = {}) =>
+    request<{ skipped_question_id: number; next_question: Question }>(`/questions/${questionId}/skip?${practiceQuery(language, opts)}`, {
       method: "POST",
       body: "{}",
     }),
+  question: (id: number) => request<Question>(`/questions/${id}`),
+  recommendations: (language?: Language | null) =>
+    request<RecommendationsOut>(`/recommendations${language ? `?language=${language}` : ""}`),
   submitResponse: (question_id: number, answer_text: string) =>
     request<ResponseOut>("/responses", { method: "POST", body: JSON.stringify({ question_id, answer_text }) }),
   progress: () => request<ProgressOut>("/progress"),

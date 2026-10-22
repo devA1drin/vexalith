@@ -57,7 +57,7 @@ export default function PracticePage() {
       setError(null);
       setLeaving(true);
       try {
-        show(await api.nextQuestion(lang, recent.current, focusRef.current));
+        show(await api.nextQuestion(lang, recent.current, { focus: focusRef.current }));
       } catch (e) {
         handleError(e, "Failed to load question");
       } finally {
@@ -85,7 +85,7 @@ export default function PracticePage() {
     setError(null);
     setLeaving(true);
     try {
-      const res = await api.skip(question.id, language, focusRef.current);
+      const res = await api.skip(question.id, language, { focus: focusRef.current });
       show(res.next_question);
     } catch (e) {
       handleError(e, "Skip failed");
