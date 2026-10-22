@@ -153,23 +153,33 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
         verdict = "incorrect"
 
     gaps: list[ReasoningGap] = []
-    if words < 20 and not (fill_blank and blank_hit):
-        gaps.append(ReasoningGap(
-            description="The explanation is very short.",
-            how_to_improve="State your answer, then justify it step by step (what the code does on each relevant line).",
-        ))
-    if marker_score < 0.4:
-        gaps.append(ReasoningGap(
-            description="Little explicit causal reasoning (because / so / therefore / when ...).",
-            how_to_improve="Connect each claim to the code: 'X happens because line N does Y'.",
-        ))
-    for label in missed_labels[:3]:
-        gaps.append(ReasoningGap(description=f"Not addressed: {label}.", how_to_improve=f"Explain {label} explicitly."))
+    if fill_blank:
+        # The answer is code, so don't nag about prose length or "because" markers.
+        if blank_hit is None:
+            gaps.append(ReasoningGap(
+                description="The code you typed doesn't fit the blank yet.",
+                how_to_improve="Trace the lines around the ? slot: what must be there for the code to do what the prompt says?",
+            ))
+        for label in missed_labels[1 if blank_hit is None else 0:][:2]:
+            gaps.append(ReasoningGap(description=f"Why it works: {label}.", how_to_improve="Add one sentence on why your code fits."))
+    else:
+        if words < 20:
+            gaps.append(ReasoningGap(
+                description="The explanation is very short.",
+                how_to_improve="State your answer, then justify it step by step (what the code does on each relevant line).",
+            ))
+        if marker_score < 0.4:
+            gaps.append(ReasoningGap(
+                description="Little explicit causal reasoning (because / so / therefore / when ...).",
+                how_to_improve="Connect each claim to the code: 'X happens because line N does Y'.",
+            ))
+        for label in missed_labels[:3]:
+            gaps.append(ReasoningGap(description=f"Not addressed: {label}.", how_to_improve=f"Explain {label} explicitly."))
 
     suggestions: list[str] = []
     if findings:
         suggestions.append("Re-trace the code line by line; your answer matches a common misconception.")
-    if missed_labels:
+    if missed_labels and not fill_blank:
         suggestions.append("Cover the missing points: " + "; ".join(missed_labels[:3]) + ".")
     if fill_blank:
         if blank_hit is None and accepted:
