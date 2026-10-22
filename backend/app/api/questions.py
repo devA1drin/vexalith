@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.db.session import get_db
-from app.models.models import Question, User
+from app.models.models import Question, SkillDomain, User
 from app.schemas.schemas import HintsOut, QuestionOut, SkipOut
 from app.services import hints as hint_service
-from app.services.learning import get_next_question, skip_question
+from app.services.learning import _question_out, get_next_question, skip_question
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
@@ -48,6 +48,17 @@ def next_question(
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/{question_id}", response_model=QuestionOut)
+def get_question(question_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> QuestionOut:
+    """Open one specific question (used by recommendations and the daily challenge)."""
+    question = db.get(Question, question_id)
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    domain = db.get(SkillDomain, question.domain_id)
+    assert domain is not None
+    return _question_out(question, domain)
 
 
 @router.post("/{question_id}/skip", response_model=SkipOut)
