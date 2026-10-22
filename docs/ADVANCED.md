@@ -38,6 +38,7 @@ Browser ──► Next.js 15 (Vercel)                         FastAPI (Vercel Py
 | GET | `/api/progress` (skills, per-language scores, fundamentals status) | JWT |
 | POST / GET | `/api/feedback` · `/api/feedback/mine` | JWT |
 | GET | `/api/feedback/recent` | public (no emails) |
+| GET | `/api/languages` · `/api/domains` · `/api/catalog` (question counts per language and kind, no content) | public |
 
 - `language` is one of `python`, `javascript`, `php`, `cpp` (C++), `html`, `css` or `general`. `focus` is optional and currently accepts only `fundamentals`.
 - `scripts/smoke_api.sh` mints a test token from `BACKEND_JWT_SECRET` and runs the whole flow against a running API.
