@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from app.ai import filipino
 from app.ai.provider import QuestionContext, get_ai_provider
 from app.config import get_settings
 from app.content.domains import DOMAINS, FUNDAMENTALS, GENERAL
@@ -369,6 +370,12 @@ def submit_response(
     if not payload.reference_answer:
         payload.reference_answer = rubric.get("reference_answer")
 
+    # Answers may be written in English, Filipino or Taglish: tell the learner it was accepted.
+    if payload.answer_language == "en":
+        payload.answer_language = filipino.detect_language(answer_text)  # LLM grader doesn't set it
+    if payload.answer_language != "en":
+        payload.language_note = filipino.FILIPINO_NOTE if payload.answer_language == "fil" else filipino.TAGLISH_NOTE
+
     # Hints revealed for this attempt cost a little: 10% each, at most 30%.
     used = hints.revealed_levels(db, user, question)
     if used:
@@ -407,6 +414,7 @@ def submit_response(
                 "reference_answer": payload.reference_answer,
                 "hints_used": payload.hints_used,
                 "hint_penalty": payload.hint_penalty,
+                "answer_language": payload.answer_language,
             },
         )
     )
