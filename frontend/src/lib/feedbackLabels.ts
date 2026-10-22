@@ -1,0 +1,73 @@
+/**
+ * Fixed labels of the feedback panel in English and Filipino.
+ * Only the interface words change; rubric points and the model answer stay as written.
+ */
+export type LabelLang = "en" | "fil";
+export const LABEL_LANG_KEY = "vexalith_feedback_lang";
+
+export const LABELS = {
+  en: {
+    evaluation: "Evaluation",
+    correct: "Correct",
+    partially_correct: "Partially correct",
+    incorrect: "Not quite",
+    correctness: "Correctness",
+    reasoning: "Reasoning",
+    whyRight: "Why this is right",
+    whyPartial: "Partly there. Here is what a full answer needs",
+    whyWrong: "Why this isn't right yet",
+    keyConcept: "Key concept",
+    alsoAccepted: "Also accepted",
+    correctCode: "Correct code for the blank",
+    hintsUsed: (n: number, pct: number) => `${n} hint${n > 1 ? "s" : ""} used · score −${pct}%`,
+    fullAnswer: "A full answer covers",
+    covered: " (covered)",
+    notCovered: " (not covered)",
+    heldUp: "Held up",
+    missed: "Missed",
+    misconceptions: "Misconceptions",
+    youWrote: "you wrote",
+    gaps: "Reasoning gaps",
+    nextSteps: "Next steps",
+    modelAnswer: "Model answer",
+    dailyDone: "Daily challenge complete",
+    streak: "Streak",
+    days: (n: number) => (n === 1 ? "day" : "days"),
+    history: "see history",
+    labelsIn: "Labels",
+    contentNote: "",
+  },
+  fil: {
+    evaluation: "Pagsusuri",
+    correct: "Tama",
+    partially_correct: "Bahagyang tama",
+    incorrect: "Hindi pa tama",
+    correctness: "Kawastuhan",
+    reasoning: "Pangangatwiran",
+    whyRight: "Bakit ito tama",
+    whyPartial: "Malapit na. Ito ang kailangan ng buong sagot",
+    whyWrong: "Bakit hindi pa ito tama",
+    keyConcept: "Pangunahing konsepto",
+    alsoAccepted: "Tinatanggap din",
+    correctCode: "Tamang code para sa patlang",
+    hintsUsed: (n: number, pct: number) => `${n} hint ang ginamit · iskor −${pct}%`,
+    fullAnswer: "Ano ang dapat sakop ng buong sagot",
+    covered: " (nasakop)",
+    notCovered: " (hindi pa nasakop)",
+    heldUp: "Tumama",
+    missed: "Nakaligtaan",
+    misconceptions: "Maling akala",
+    youWrote: "isinulat mo",
+    gaps: "Kulang sa pangangatwiran",
+    nextSteps: "Susunod na hakbang",
+    modelAnswer: "Halimbawang sagot",
+    dailyDone: "Tapos na ang daily challenge",
+    streak: "Sunod-sunod",
+    days: () => "araw",
+    history: "tingnan ang kasaysayan",
+    labelsIn: "Wika",
+    contentNote: "Nasa English pa rin ang mga punto ng rubric at ang halimbawang sagot.",
+  },
+} as const;
+
+export type Labels = (typeof LABELS)[LabelLang];

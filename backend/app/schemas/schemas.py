@@ -92,6 +92,8 @@ class FeedbackPayload(BaseModel):
     accepted_answers: list[str] = Field(default_factory=list)  # fill-in questions: correct code
     hints_used: int = 0
     hint_penalty: float = 0.0
+    answer_language: Literal["en", "fil", "taglish"] = "en"  # language the learner wrote in
+    language_note: str | None = None  # short note shown when the answer is in Filipino / Taglish
     daily_completed: bool = False  # this answer completed today's daily challenge
     daily_streak: int = 0
     raw_explanation: str = ""

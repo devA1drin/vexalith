@@ -25,6 +25,10 @@ export type FeedbackPayload = {
   accepted_answers?: string[];
   hints_used?: number;
   hint_penalty?: number;
+  /** Language the learner wrote in: English, Filipino (Tagalog) or Taglish. */
+  answer_language?: "en" | "fil" | "taglish";
+  /** Short Filipino note shown when the answer was in Filipino / Taglish. */
+  language_note?: string | null;
   /** True when this answer completed today's daily challenge. */
   daily_completed?: boolean;
   daily_streak?: number;

@@ -18,15 +18,19 @@ from __future__ import annotations
 
 import re
 
+from app.ai.filipino import gloss as filipino_gloss
 from app.ai.provider import AIProvider, QuestionContext
 from app.schemas.schemas import FeedbackPayload, Finding, ReasoningGap
 
-REASONING_MARKERS = re.compile(
-    r"\b(because|since|therefore|so that|so the|which means|this means|thus|hence|as a result|"
+_MARKER_WORDS = (
+    r"because|since|therefore|so that|so the|which means|this means|thus|hence|as a result|"
     r"instead|however|whereas|otherwise|if|when|until|each|every|iteration|loop|complexity|"
-    r"o\(|edge case|invariant|fix|should|returns?|throws?|raises?)\b",
-    re.I,
+    r"o\(|edge case|invariant|fix|should|returns?|throws?|raises?"
 )
+REASONING_MARKERS = re.compile(r"\b(" + _MARKER_WORDS + r")\b", re.I)
+# On the English gloss of a Filipino answer, "kaya" ("so the result ...") becomes a bare
+# "so": count it as a connective there.
+GLOSS_MARKERS = re.compile(r"\b(" + _MARKER_WORDS + r"|so)\b", re.I)
 _WS = re.compile(r"\s+")
 
 
@@ -98,6 +102,15 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
 
     norm = _normalize(answer)
     compact = _despace(answer)
+    # Filipino / Taglish answers are matched through an English gloss as well,
+    # so the same ideas score the same in either language.
+    g = filipino_gloss(answer)
+    views = [(norm, compact)]
+    if g.language != "en":
+        views += [(_normalize(g.primary), _despace(g.primary)), (_normalize(g.full), _despace(g.full))]
+
+    def said(keyword: str, *, strict: bool = False) -> bool:
+        return any(keyword_hit(n, c, keyword) for n, c in (views[:2] if strict else views))
 
     hit_labels: list[str] = []
     missed_labels: list[str] = []
@@ -110,7 +123,7 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
     for i, c in enumerate(concepts):
         w = float(c.get("weight", 1))
         total_w += w
-        hit = any(keyword_hit(norm, compact, k) for k in c.get("keywords", []))
+        hit = any(said(k) for k in c.get("keywords", []))
         if fill_blank and i == 0:
             hit = blank_hit is not None
         if hit:
@@ -129,15 +142,22 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
     if not primary_hit:
         for m in misconceptions_r:
             for k in m.get("keywords", []):
-                if keyword_hit(norm, compact, k):
+                if said(k, strict=True):
                     findings.append(
                         Finding(name=m["label"], explanation=m["explanation"], evidence_span=k, confidence=0.6)
                     )
                     break
 
     words = len(answer.split())
+    marker_text = answer
+    if g.language != "en":
+        # Tagalog needs extra grammar words ("ang", "ng", "mga"); count the gloss
+        # words (plus ~30% for the English articles a translation would add) so length is judged fairly.
+        gloss_words = sum(1 for t in g.primary.split() if any(ch.isalnum() for ch in t))
+        words = min(words, round(gloss_words * 1.3))
+        marker_text = g.primary
     length_score = min(1.0, words / 60.0)
-    markers = len(REASONING_MARKERS.findall(answer))
+    markers = len((GLOSS_MARKERS if g.language != "en" else REASONING_MARKERS).findall(marker_text))
     marker_score = min(1.0, markers / 5.0)
     reasoning = round(0.5 * length_score + 0.5 * marker_score, 3)
 
@@ -222,6 +242,7 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
         reference_answer=reference,
         raw_explanation=explanation,
         provider_used="heuristic",
+        answer_language=g.language,
     )
 
 
