@@ -38,12 +38,23 @@ export type Question = {
 
 export type ResponseOut = { id: number; question_id: number; answer_text: string; created_at: string; feedback: FeedbackPayload };
 export type DomainProgress = { domain_slug: string; domain_name: string; mastery: number; attempts: number };
+export type Focus = "fundamentals";
+export type FundamentalsStatus = {
+  answers: number;
+  strong_answers: number;
+  recent_average: number;
+  cleared: boolean;
+  experienced: boolean;
+  min_answers: number;
+  pass_average: number;
+};
 export type LanguageProgress = { language: string; attempts: number; average_score: number };
 export type ProgressOut = {
   user_id: number;
   display_name: string;
   domains: DomainProgress[];
   languages?: LanguageProgress[];
+  fundamentals?: FundamentalsStatus | null;
   total_responses: number;
   total_skips: number;
   average_mastery: number;
@@ -88,10 +99,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  nextQuestion: (language: Language, exclude: number[] = []) =>
-    request<Question>(`/questions/next?language=${language}${exclude.length ? `&exclude=${exclude.join(",")}` : ""}`),
-  skip: (questionId: number, language: Language) =>
-    request<{ skipped_question_id: number; next_question: Question }>(`/questions/${questionId}/skip?language=${language}`, {
+  nextQuestion: (language: Language, exclude: number[] = [], focus: Focus | null = null) =>
+    request<Question>(
+      `/questions/next?language=${language}${exclude.length ? `&exclude=${exclude.join(",")}` : ""}${focus ? `&focus=${focus}` : ""}`,
+    ),
+  skip: (questionId: number, language: Language, focus: Focus | null = null) =>
+    request<{ skipped_question_id: number; next_question: Question }>(`/questions/${questionId}/skip?language=${language}${focus ? `&focus=${focus}` : ""}`, {
       method: "POST",
       body: "{}",
     }),

@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, ApiError, LANGUAGE_IDS, type FeedbackPayload, type Language, type Question } from "@/lib/api";
+import { api, ApiError, LANGUAGE_IDS, type FeedbackPayload, type Focus, type Language, type Question } from "@/lib/api";
 import { CodeBlock } from "@/components/CodeBlock";
 import { FeedbackCard } from "@/components/FeedbackCard";
 
 const LANG_KEY = "vexalith_language";
+const FOCUS_KEY = "vexalith_focus";
 const LANGS: { id: Language; label: string }[] = [
   { id: "python", label: "Python" },
   { id: "javascript", label: "JavaScript" },
@@ -25,6 +26,8 @@ export default function PracticePage() {
   const [busy, setBusy] = useState<null | "load" | "skip" | "submit">(null);
   const [leaving, setLeaving] = useState(false);
   const [count, setCount] = useState(0);
+  const [focus, setFocus] = useState<Focus | null>(null);
+  const focusRef = useRef<Focus | null>(null);
   const recent = useRef<number[]>([]);
   const initialized = useRef(false);
 
@@ -52,7 +55,7 @@ export default function PracticePage() {
       setError(null);
       setLeaving(true);
       try {
-        show(await api.nextQuestion(lang, recent.current));
+        show(await api.nextQuestion(lang, recent.current, focusRef.current));
       } catch (e) {
         handleError(e, "Failed to load question");
       } finally {
@@ -68,6 +71,9 @@ export default function PracticePage() {
     const saved = localStorage.getItem(LANG_KEY);
     const lang: Language = LANGUAGE_IDS.includes(saved as Language) ? (saved as Language) : "python";
     setLanguage(lang);
+    const f: Focus | null = localStorage.getItem(FOCUS_KEY) === "fundamentals" ? "fundamentals" : null;
+    focusRef.current = f;
+    setFocus(f);
     loadNext(lang);
   }, [loadNext]);
 
@@ -77,7 +83,7 @@ export default function PracticePage() {
     setError(null);
     setLeaving(true);
     try {
-      const res = await api.skip(question.id, language);
+      const res = await api.skip(question.id, language, focusRef.current);
       show(res.next_question);
     } catch (e) {
       handleError(e, "Skip failed");
@@ -105,6 +111,16 @@ export default function PracticePage() {
     setLanguage(lang);
     localStorage.setItem(LANG_KEY, lang);
     loadNext(lang);
+  }
+
+  function onFocusToggle() {
+    const next: Focus | null = focus ? null : "fundamentals";
+    focusRef.current = next;
+    setFocus(next);
+    if (next) localStorage.setItem(FOCUS_KEY, next);
+    else localStorage.removeItem(FOCUS_KEY);
+    // Switch immediately unless the learner is reading feedback on an answer.
+    if (next && !feedback && question?.domain_slug !== "fundamentals") loadNext(language);
   }
 
   const level = question ? LEVEL[question.difficulty] ?? 1 : 0;
@@ -140,6 +156,20 @@ export default function PracticePage() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={onFocusToggle}
+            disabled={busy !== null}
+            aria-pressed={focus === "fundamentals"}
+            data-testid="focus-fundamentals"
+            title="Practice only Fundamentals"
+            className={`flex items-center gap-2 border px-3 py-1.5 font-mono text-[12px] uppercase tracking-wider transition-colors ${
+              focus ? "border-accent text-accent" : "border-ink-700 text-ink-300 hover:text-ink-50"
+            }`}
+          >
+            <span aria-hidden="true" className={`inline-block h-2.5 w-2.5 border ${focus ? "border-accent bg-accent" : "border-ink-500"}`} />
+            Focus: Fundamentals
+          </button>
           {!feedback && (
             <button type="button" onClick={onSkip} disabled={!question || busy !== null} className="btn-ghost py-[7px]" data-testid="skip">
               {busy === "skip" ? "Skipping…" : <>Skip <span className="btn-arrow">↷</span></>}

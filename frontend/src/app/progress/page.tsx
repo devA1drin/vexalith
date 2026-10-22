@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api, ApiError, type LanguageProgress, type ProgressOut } from "@/lib/api";
+import { api, ApiError, type FundamentalsStatus, type LanguageProgress, type ProgressOut } from "@/lib/api";
 import { MasteryChart } from "@/components/MasteryChart";
 import { CountUp } from "@/components/CountUp";
 
@@ -41,6 +41,7 @@ export default function ProgressPage() {
               <div className="mt-2 truncate font-display text-lg font-semibold text-accent">{weakest?.domain_name ?? "—"}</div>
             </div>
           </div>
+          {data.fundamentals && <FundamentalsPanel s={data.fundamentals} />}
           <MasteryChart domains={data.domains} />
           <div className="card overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -110,6 +111,41 @@ function LanguageBreakdown({ rows }: { rows: LanguageProgress[] }) {
           })}
         </ul>
       )}
+    </section>
+  );
+}
+
+function FundamentalsPanel({ s }: { s: FundamentalsStatus }) {
+  const done = Math.min(s.answers, s.min_answers);
+  const avg = Math.round(s.recent_average * 100);
+  const need = Math.round(s.pass_average * 100);
+  const state = s.cleared ? "cleared" : s.experienced ? "optional" : "in progress";
+  return (
+    <section aria-labelledby="fund-h" className="card grid gap-5 p-5 sm:grid-cols-[1fr_auto] sm:items-center" data-testid="fundamentals-panel">
+      <div>
+        <div className="flex items-baseline gap-3">
+          <h2 id="fund-h" className="label">00 · Fundamentals</h2>
+          <span className={`font-mono text-[11px] uppercase tracking-wider ${s.cleared ? "text-accent" : "text-ink-400"}`}>{state}</span>
+        </div>
+        <p className="mt-2 text-sm text-ink-300">
+          {s.cleared
+            ? "Basics cleared: practice now covers every skill and returns to Fundamentals if they slip."
+            : s.experienced
+              ? "You already practise other skills. Turn on Focus: Fundamentals on the practice page to drill the basics."
+              : `Answer ${s.min_answers} Fundamentals questions averaging ${need}% or more to unlock every skill.`}
+        </p>
+      </div>
+      <div className="flex items-center gap-4 font-mono text-sm">
+        <div className="flex gap-1" role="img" aria-label={`${done} of ${s.min_answers} answers`}>
+          {Array.from({ length: s.min_answers }, (_, i) => (
+            <span key={i} className={`h-3 w-5 border ${i < done ? "border-accent bg-accent" : "border-ink-600"}`} />
+          ))}
+        </div>
+        <span className="text-ink-300">
+          avg <span className={avg >= need ? "text-accent" : "text-ink-50"}>{s.answers ? `${avg}%` : "—"}</span>
+          <span className="text-ink-500"> / {need}%</span>
+        </span>
+      </div>
     </section>
   );
 }
