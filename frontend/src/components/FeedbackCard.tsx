@@ -50,6 +50,16 @@ export function FeedbackCard({ feedback }: { feedback: FeedbackPayload }) {
         </div>
       </div>
 
+      {feedback.daily_completed && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-accent bg-accent/10 px-4 py-3" data-testid="daily-complete">
+          <span className="font-mono text-[12px] uppercase tracking-wider text-accent">Daily challenge complete</span>
+          <span className="text-sm text-ink-100">
+            Streak: <span className="font-semibold text-ink-50">{feedback.daily_streak ?? 1} {feedback.daily_streak === 1 ? "day" : "days"}</span>
+            <a href="/daily" className="ml-3 text-ink-300 underline-offset-2 hover:text-ink-50 hover:underline">see history</a>
+          </span>
+        </div>
+      )}
+
       <div className="grid gap-5 sm:grid-cols-2">
         <Meter label="Correctness" value={feedback.correctness_score} delay={150} />
         <Meter label="Reasoning" value={feedback.reasoning_score} delay={300} />

@@ -46,6 +46,7 @@ export default function PracticePage() {
   const [difficulty, setDifficulty] = useState<Difficulty>("adaptive");
   const [topic, setTopic] = useState<string | null>(null);
   const optsRef = useRef<{ difficulty: Difficulty; topic: string | null }>({ difficulty: "adaptive", topic: null });
+  const [dailyId, setDailyId] = useState<number | null>(null);
   const opts = (): PracticeOptions => ({ focus: focusRef.current, ...optsRef.current });
   const recent = useRef<number[]>([]);
   const initialized = useRef(false);
@@ -83,6 +84,10 @@ export default function PracticePage() {
     },
     [show],
   );
+
+  useEffect(() => {
+    api.daily().then((d) => setDailyId(d.question_id)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -289,6 +294,11 @@ export default function PracticePage() {
               {[1, 2, 3].map((n) => <span key={n} className={`inline-block h-2 w-2 ${n <= level ? "bg-accent" : "bg-ink-700"}`} />)}
               <span className="ml-1">{question.difficulty}</span>
             </span>
+            {question.id === dailyId && (
+              <span className="chip border-accent bg-accent text-ink-950" data-testid="daily-chip">
+                Daily challenge
+              </span>
+            )}
             {isBlank && (
               <span className="chip border-accent text-accent" data-testid="kind-fill-blank">
                 Missing code
