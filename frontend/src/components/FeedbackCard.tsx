@@ -62,7 +62,7 @@ export function FeedbackCard({ feedback }: { feedback: FeedbackPayload }) {
       {feedback.strengths.length > 0 && (
         <Block title="Held up" tone="border-accent text-accent" delay={next()}><List items={feedback.strengths} /></Block>
       )}
-      {feedback.missed_concepts.length > 0 && (
+      {feedback.missed_concepts.length > 0 && !feedback.missed_concepts.every((m) => (feedback.key_points ?? []).includes(m)) && (
         <Block title="Missed" tone="border-ink-300 text-ink-200" delay={next()}><List items={feedback.missed_concepts} /></Block>
       )}
       {feedback.misconceptions.length > 0 && (
