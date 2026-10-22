@@ -44,6 +44,11 @@ For the "fundamentals" skill the learner may be a complete beginner: write the
 feedback in plain, friendly language, define any term you use (e.g. "falsy",
 "scope", "concatenate"), avoid jargon and Big-O, and walk through the code one
 line at a time in the reference answer.
+If the snippet contains a ____ blank (rubric kind "fill_blank"), the learner
+must supply the missing code: accept any equivalent code (different spacing,
+quote style, a trailing semicolon, an equivalent expression such as i += 1
+for i++), not only the listed accepted_answers; a short answer that is just the
+right code is correct, so judge reasoning leniently there.
 Use the teacher rubric when provided, but judge the substance, not keywords.
 Quote the learner when pointing out a misconception.
 

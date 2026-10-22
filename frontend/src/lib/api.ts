@@ -34,6 +34,8 @@ export type Question = {
   title: string;
   code: string;
   prompt: string;
+  /** "fill_blank": the snippet has a ____ blank and the learner supplies the missing code. */
+  kind?: "explain" | "fill_blank";
 };
 
 export type ResponseOut = { id: number; question_id: number; answer_text: string; created_at: string; feedback: FeedbackPayload };

@@ -53,6 +53,26 @@ def keyword_hit(answer_norm: str, answer_compact: str, keyword: str) -> bool:
     return kw in answer_norm or _despace(kw) in answer_compact
 
 
+_QUOTES = str.maketrans({"'": '"', "`": '"', "\u2018": '"', "\u2019": '"', "\u201c": '"', "\u201d": '"'})
+
+
+def _code_norm(text: str) -> str:
+    """Normalise code for blank matching: no whitespace, lower case, one quote style, no trailing ;."""
+    return _despace(text).translate(_QUOTES).rstrip(";")
+
+
+def fill_blank_hit(answer: str, accepted: list[str]) -> str | None:
+    """Return the accepted answer the learner supplied (equivalent forms allowed), if any."""
+    norm = _code_norm(answer)
+    # Also accept the answer with semicolons removed everywhere ("i++;" vs "i++").
+    loose = norm.replace(";", "")
+    for acc in accepted:
+        a = _code_norm(acc)
+        if a and (a in norm or a.replace(";", "") in loose):
+            return acc
+    return None
+
+
 def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
     rubric = question.rubric or {}
     concepts = rubric.get("concepts") or []
@@ -67,10 +87,16 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
     total_w = 0.0
     got_w = 0.0
     primary_hit = False
+    fill_blank = rubric.get("kind") == "fill_blank"
+    accepted = rubric.get("accepted_answers") or []
+    blank_hit = fill_blank_hit(answer, accepted) if fill_blank else None
     for i, c in enumerate(concepts):
         w = float(c.get("weight", 1))
         total_w += w
-        if any(keyword_hit(norm, compact, k) for k in c.get("keywords", [])):
+        hit = any(keyword_hit(norm, compact, k) for k in c.get("keywords", []))
+        if fill_blank and i == 0:
+            hit = blank_hit is not None
+        if hit:
             got_w += w
             hit_labels.append(c["label"])
             if i == 0:
@@ -78,6 +104,9 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
         else:
             missed_labels.append(c["label"])
     correctness = (got_w / total_w) if total_w else 0.5
+    if blank_hit is not None:
+        # The right code in the blank is a correct answer; the "why" points only add on top.
+        correctness = max(correctness, 0.8)
 
     findings: list[Finding] = []
     if not primary_hit:
@@ -107,7 +136,7 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
         verdict = "incorrect"
 
     gaps: list[ReasoningGap] = []
-    if words < 20:
+    if words < 20 and not (fill_blank and blank_hit):
         gaps.append(ReasoningGap(
             description="The explanation is very short.",
             how_to_improve="State your answer, then justify it step by step (what the code does on each relevant line).",
@@ -125,7 +154,15 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
         suggestions.append("Re-trace the code line by line; your answer matches a common misconception.")
     if missed_labels:
         suggestions.append("Cover the missing points: " + "; ".join(missed_labels[:3]) + ".")
-    if question.domain_slug == "fundamentals":
+    if fill_blank:
+        if blank_hit is None and accepted:
+            suggestions.append(
+                "Read the lines around the blank: what value or statement must be there for the code to do what "
+                "the prompt says? One accepted answer: " + accepted[0]
+            )
+        else:
+            suggestions.append("Nice fill. Now say in one sentence why that code is the one that fits.")
+    elif question.domain_slug == "fundamentals":
         suggestions.append(
             "Beginner tip: say what each line does in plain words, write down the value of every variable "
             "after each step, then compare with the model answer below."
