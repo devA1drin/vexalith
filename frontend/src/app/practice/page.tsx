@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, LANGUAGE_IDS, type FeedbackPayload, type Focus, type Language, type Question } from "@/lib/api";
 import { CodeBlock } from "@/components/CodeBlock";
 import { FeedbackCard } from "@/components/FeedbackCard";
+import { HintPanel } from "@/components/HintPanel";
 
 const LANG_KEY = "vexalith_language";
 const FOCUS_KEY = "vexalith_focus";
@@ -214,6 +215,7 @@ export default function PracticePage() {
             </div>
             <div className="flex min-w-0 flex-col gap-4">
               <p className="border-l-2 border-accent pl-4 text-[17px] font-medium leading-relaxed text-ink-50">{question.prompt}</p>
+              <HintPanel questionId={question.id} hintCount={question.hint_count ?? 0} locked={!!feedback} />
               <label className="flex flex-1 flex-col gap-2">
                 <span className="label">{isBlank ? "The missing code (+ why, optional)" : "Your explanation"}</span>
                 <textarea

@@ -16,6 +16,8 @@ const RULES: Rule[] = [
   { method: "GET", pattern: /^me$/ },
   { method: "GET", pattern: /^questions\/next$/ },
   { method: "POST", pattern: /^questions\/\d+\/skip$/ },
+  { method: "GET", pattern: /^questions\/\d+\/hints$/ },
+  { method: "POST", pattern: /^questions\/\d+\/hints$/ },
   { method: "POST", pattern: /^responses$/ },
   { method: "GET", pattern: /^progress$/ },
   { method: "POST", pattern: /^feedback$/ },
