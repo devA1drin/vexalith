@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.ai.provider import QuestionContext, get_ai_provider
 from app.config import get_settings
-from app.content.domains import GENERAL
+from app.content.domains import DOMAINS, FUNDAMENTALS, GENERAL
 from app.models.models import (
     Difficulty,
     Feedback,
@@ -20,7 +20,14 @@ from app.models.models import (
     SkillMastery,
     User,
 )
-from app.schemas.schemas import DomainProgress, FeedbackPayload, LanguageProgress, ProgressOut, QuestionOut
+from app.schemas.schemas import (
+    DomainProgress,
+    FeedbackPayload,
+    FundamentalsStatus,
+    LanguageProgress,
+    ProgressOut,
+    QuestionOut,
+)
 from app.services import adaptive
 
 
@@ -135,6 +142,54 @@ def _recent_question_ids(db: Session, user: User, limit: int) -> list[int]:
     return [r[0] for r in merged[:limit]]
 
 
+# ── Fundamentals onboarding ────────────────────────────────────────────────
+# New learners start in Fundamentals at level 1 and stay there until they have
+# answered FUND_MIN_ANSWERS fundamentals questions with a recent average score of
+# at least FUND_PASS_AVG ("cleared"). Learners who already have real practice in
+# other skills (EXPERIENCED_OTHER_ANSWERS answers) are never forced back. After
+# that the weakest-first engine takes over and still revisits Fundamentals when
+# it becomes the weakest skill.
+FUND_MIN_ANSWERS = 5
+FUND_PASS_AVG = 0.6
+FUND_WINDOW = 5
+EXPERIENCED_OTHER_ANSWERS = 3
+
+
+def fundamentals_status(db: Session, user: User) -> FundamentalsStatus:
+    rows = (
+        db.query(SkillDomain.slug, Feedback.overall_score, Response.created_at)
+        .join(Question, Question.domain_id == SkillDomain.id)
+        .join(Response, Response.question_id == Question.id)
+        .join(Feedback, Feedback.response_id == Response.id)
+        .filter(Response.user_id == user.id)
+        .order_by(Response.created_at.desc())
+        .all()
+    )
+    fund = [float(r[1] or 0.0) for r in rows if r[0] == FUNDAMENTALS]
+    other = sum(1 for r in rows if r[0] != FUNDAMENTALS)
+    recent = fund[:FUND_WINDOW]
+    avg = round(sum(recent) / len(recent), 4) if recent else 0.0
+    cleared = len(fund) >= FUND_MIN_ANSWERS and avg >= FUND_PASS_AVG
+    return FundamentalsStatus(
+        answers=len(fund),
+        strong_answers=sum(1 for x in fund if x >= FUND_PASS_AVG),
+        recent_average=avg,
+        cleared=cleared,
+        experienced=other >= EXPERIENCED_OTHER_ANSWERS,
+        min_answers=FUND_MIN_ANSWERS,
+        pass_average=FUND_PASS_AVG,
+    )
+
+
+def fundamentals_level(status: FundamentalsStatus) -> str:
+    """Level ladder inside Fundamentals: level 1 until 3 strong answers, level 2 until 6, then 3."""
+    if status.strong_answers < 3:
+        return "beginner"
+    if status.strong_answers < 6:
+        return "intermediate"
+    return "advanced"
+
+
 def get_next_question(
     db: Session,
     user: User,
@@ -142,6 +197,7 @@ def get_next_question(
     language: str = "python",
     exclude_ids: set[int] | None = None,
     avoid_domain_ids: set[int] | None = None,
+    focus: str | None = None,
     rng: random.Random | None = None,
 ) -> QuestionOut:
     """Adaptive next question for the user in the chosen language.
@@ -179,6 +235,16 @@ def get_next_question(
         for m in masteries
         if m.domain_id in domains and m.domain_id in available
     ]
+    # Fundamentals: explicit focus, or onboarding for new learners.
+    fund_id = next((d.id for d in domains.values() if d.slug == FUNDAMENTALS), None)
+    forced_level: str | None = None
+    if fund_id is not None and fund_id in available:
+        status = fundamentals_status(db, user)
+        onboarding = not status.cleared and not status.experienced
+        if focus == FUNDAMENTALS or onboarding:
+            dm_list = [m for m in dm_list if m.domain_id == fund_id] or dm_list
+            avoid_domain_ids = None
+            forced_level = fundamentals_level(status)
     # After a skip, move on to a different skill when one is available.
     if avoid_domain_ids:
         others = [m for m in dm_list if m.domain_id not in avoid_domain_ids]
@@ -197,10 +263,12 @@ def get_next_question(
         dm_list,
         key=lambda m: (round(m.mastery * 10), m.attempts, -recent_domains.get(m.domain_id, 10_000)),
     )
-    preferred = adaptive.mastery_to_difficulty(weakest.mastery, offset=settings.target_difficulty_offset)
+    preferred = forced_level or adaptive.mastery_to_difficulty(
+        weakest.mastery, offset=settings.target_difficulty_offset
+    )
     domain = domains[weakest.domain_id]
 
-    if language != GENERAL:
+    if language != GENERAL and forced_level is None:
         generated = maybe_generate_llm_question(db, domain=domain, difficulty=preferred, language=language)
         if generated:
             return _question_out(generated, domain)
@@ -220,7 +288,11 @@ def get_next_question(
         return picked["obj"] if picked else None
 
     in_domain = [q for q in all_in_lang if q.domain_id == domain.id]
-    q = choose(in_domain) or choose(all_in_lang)
+    q = choose(in_domain) or (None if forced_level else choose(all_in_lang))
+    if q is None and forced_level:
+        # Every fundamentals question is "recent": reuse the least recent one.
+        pool = [x for x in in_domain if x.id not in (exclude_ids or set())] or in_domain
+        q = rng.choice(pool)
     if q is None:
         # Everything is "recent": at least avoid the explicitly excluded ids.
         pool = [x for x in all_in_lang if x.id not in (exclude_ids or set())] or all_in_lang
@@ -313,7 +385,8 @@ def get_progress(db: Session, user: User) -> ProgressOut:
                 attempts=m.attempts,
             )
         )
-    domain_rows.sort(key=lambda x: x.domain_slug)
+    order = {d["slug"]: i for i, d in enumerate(DOMAINS)}
+    domain_rows.sort(key=lambda x: (order.get(x.domain_slug, 99), x.domain_slug))
     avg = (
         sum(r.mastery for r in domain_rows) / len(domain_rows) if domain_rows else 0.0
     )
@@ -336,6 +409,7 @@ def get_progress(db: Session, user: User) -> ProgressOut:
         display_name=user.display_name,
         domains=domain_rows,
         languages=languages,
+        fundamentals=fundamentals_status(db, user),
         total_responses=total,
         total_skips=skips,
         average_mastery=round(avg, 4),

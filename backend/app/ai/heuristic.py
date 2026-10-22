@@ -125,7 +125,12 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
         suggestions.append("Re-trace the code line by line; your answer matches a common misconception.")
     if missed_labels:
         suggestions.append("Cover the missing points: " + "; ".join(missed_labels[:3]) + ".")
-    if question.domain_slug == "algorithmic_thinking":
+    if question.domain_slug == "fundamentals":
+        suggestions.append(
+            "Beginner tip: say what each line does in plain words, write down the value of every variable "
+            "after each step, then compare with the model answer below."
+        )
+    elif question.domain_slug == "algorithmic_thinking":
         suggestions.append("Justify Big-O by counting how many times the dominant operation runs.")
     elif question.domain_slug == "edge_cases_testing":
         suggestions.append("For each edge case, state the input, the expected result, and the actual result.")
