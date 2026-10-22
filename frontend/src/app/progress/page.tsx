@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api, ApiError, type FundamentalsStatus, type LanguageProgress, type ProgressOut } from "@/lib/api";
+import { api, ApiError, type FundamentalsStatus, type LanguageProgress, type ProgressOut, type RecentAttempt } from "@/lib/api";
 import { MasteryChart } from "@/components/MasteryChart";
 import { CountUp } from "@/components/CountUp";
 import { Recommendations } from "@/components/Recommendations";
+import { TrendChart } from "@/components/TrendChart";
 
 export default function ProgressPage() {
   const [data, setData] = useState<ProgressOut | null>(null);
@@ -33,15 +34,17 @@ export default function ProgressPage() {
       {!data && !error && <div className="card h-48 animate-pulse" />}
       {data && (
         <>
-          <div className="grid grid-cols-2 border-l border-t border-ink-700 sm:grid-cols-4">
-            <Stat label="Answers" value={data.total_responses} i={0} />
-            <Stat label="Skips" value={data.total_skips} i={1} />
-            <Stat label="Avg mastery" value={Math.round(data.average_mastery * 100)} suffix="%" i={2} />
-            <div className="rise border-b border-r border-ink-700 p-5" style={{ ["--rd" as string]: "240ms" }}>
-              <div className="label">Focus next</div>
-              <div className="mt-2 truncate font-display text-lg font-semibold text-accent">{weakest?.domain_name ?? "—"}</div>
-            </div>
+          <div className="grid grid-cols-2 border-l border-t border-ink-700 sm:grid-cols-4" data-testid="progress-stats">
+            <Stat label="Solved" value={data.questions_solved ?? 0} note={`of ${data.questions_answered ?? 0} questions tried`} i={0} />
+            <Stat label="Accuracy" value={Math.round((data.accuracy ?? 0) * 100)} suffix="%" note={`${data.correct_answers ?? 0} of ${data.total_responses} answers right`} i={1} />
+            <Stat label="Avg score" value={Math.round((data.average_score ?? 0) * 100)} note="out of 100, hints included" i={2} />
+            <StreakStat current={data.current_streak ?? 0} best={data.best_streak ?? 0} today={!!data.daily_done_today} i={3} />
+            <Stat label="Answers" value={data.total_responses} i={4} />
+            <Stat label="Skipped" value={data.total_skips} i={5} />
+            <Stat label="Hints used" value={data.hints_used ?? 0} i={6} />
+            <Stat label="Avg mastery" value={Math.round(data.average_mastery * 100)} suffix="%" note={weakest ? `lowest: ${weakest.domain_name}` : undefined} i={7} />
           </div>
+          <TrendChart days={data.history ?? []} improvement={data.improvement} />
           {data.fundamentals && <FundamentalsPanel s={data.fundamentals} />}
           <Recommendations />
           <MasteryChart domains={data.domains} />
@@ -67,18 +70,96 @@ export default function ProgressPage() {
             </table>
           </div>
           <LanguageBreakdown rows={data.languages ?? []} />
+          <RecentAttempts rows={data.recent ?? []} />
         </>
       )}
     </div>
   );
 }
 
-function Stat({ label, value, suffix = "", i }: { label: string; value: number; suffix?: string; i: number }) {
+function Stat({ label, value, suffix = "", note, i }: { label: string; value: number; suffix?: string; note?: string; i: number }) {
   return (
-    <div className="rise border-b border-r border-ink-700 p-5" style={{ ["--rd" as string]: `${i * 80}ms` }}>
+    <div className="rise border-b border-r border-ink-700 p-5" style={{ ["--rd" as string]: `${i * 60}ms` }}>
       <div className="label">{label}</div>
-      <div className="mt-2 font-display text-4xl font-bold text-ink-50"><CountUp to={value} delay={i * 80} />{suffix}</div>
+      <div className="mt-2 font-display text-4xl font-bold text-ink-50"><CountUp to={value} delay={i * 60} />{suffix}</div>
+      {note && <div className="mt-1 truncate text-[12px] text-ink-500">{note}</div>}
     </div>
+  );
+}
+
+function StreakStat({ current, best, today, i }: { current: number; best: number; today: boolean; i: number }) {
+  return (
+    <Link href="/daily" className="rise group border-b border-r border-ink-700 p-5 transition-colors hover:bg-ink-900" style={{ ["--rd" as string]: `${i * 60}ms` }} data-testid="streak-stat">
+      <div className="label group-hover:text-accent">Daily streak</div>
+      <div className="mt-2 font-display text-4xl font-bold text-ink-50">
+        <CountUp to={current} delay={i * 60} /><span className="ml-1 text-base font-normal text-ink-400">{current === 1 ? "day" : "days"}</span>
+      </div>
+      <div className="mt-1 text-[12px] text-ink-500">best {best} · today {today ? <span className="text-accent">done</span> : "not yet"}</div>
+    </Link>
+  );
+}
+
+const VERDICT_STYLE: Record<string, [string, string]> = {
+  correct: ["Correct", "border-accent text-accent"],
+  partially_correct: ["Partial", "border-ink-400 text-ink-200"],
+  incorrect: ["Not yet", "border-signal text-signal-soft"],
+};
+
+function when(iso: string) {
+  const t = new Date(/[zZ]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}Z`).getTime();
+  const mins = Math.max(0, Math.round((Date.now() - t) / 60_000));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const h = Math.round(mins / 60);
+  if (h < 24) return `${h} h ago`;
+  return `${Math.round(h / 24)} d ago`;
+}
+
+function RecentAttempts({ rows }: { rows: RecentAttempt[] }) {
+  return (
+    <section aria-labelledby="recent-h" className="card overflow-x-auto" data-testid="recent-attempts">
+      <div className="flex items-baseline justify-between border-b border-ink-700 px-5 py-3">
+        <h2 id="recent-h" className="label">Recent answers</h2>
+        <span className="label text-ink-500">click a question to try it again</span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="px-5 py-4 text-sm text-ink-400">Your latest answers will be listed here.</p>
+      ) : (
+        <table className="w-full min-w-[40rem] text-left text-sm">
+          <caption className="sr-only">Your most recent answers</caption>
+          <thead>
+            <tr className="border-b border-ink-700">
+              <th className="label px-5 py-2.5 font-normal">Question</th>
+              <th className="label px-3 py-2.5 font-normal">Language · skill</th>
+              <th className="label px-3 py-2.5 font-normal">Result</th>
+              <th className="label px-3 py-2.5 text-right font-normal">Score</th>
+              <th className="label px-5 py-2.5 text-right font-normal">When</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => {
+              const [label, cls] = VERDICT_STYLE[r.verdict] ?? VERDICT_STYLE.partially_correct;
+              return (
+                <tr key={`${r.question_id}-${i}`} className="border-b border-ink-800 last:border-0">
+                  <td className="max-w-[18rem] truncate px-5 py-2.5">
+                    <Link href={`/practice?language=${r.language}&question=${r.question_id}`} className="text-ink-100 hover:text-accent">{r.title}</Link>
+                  </td>
+                  <td className="px-3 py-2.5 font-mono text-[12px] text-ink-400">
+                    <span className="uppercase text-ink-200">{LANG_LABEL[r.language] ?? r.language}</span> · {r.domain_name}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <span className={`inline-block border px-1.5 py-0.5 font-mono text-[10.5px] uppercase tracking-wider ${cls}`}>{label}</span>
+                    {r.hints_used > 0 && <span className="ml-2 font-mono text-[11px] text-ink-500">{r.hints_used} hint{r.hints_used > 1 ? "s" : ""}</span>}
+                  </td>
+                  <td className="px-3 py-2.5 text-right font-mono text-ink-50">{Math.round(r.score * 100)}</td>
+                  <td className="whitespace-nowrap px-5 py-2.5 text-right font-mono text-[12px] text-ink-500">{when(r.created_at)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </section>
   );
 }
 
@@ -90,8 +171,8 @@ function LanguageBreakdown({ rows }: { rows: LanguageProgress[] }) {
   return (
     <section aria-labelledby="by-lang" className="card">
       <div className="flex items-baseline justify-between border-b border-ink-700 px-5 py-3">
-        <h2 id="by-lang" className="label">By language</h2>
-        <span className="label text-ink-500">answers · avg score</span>
+        <h2 id="by-lang" className="label">Mastery by language</h2>
+        <span className="label text-ink-500">answers · accuracy · avg score</span>
       </div>
       {rows.length === 0 ? (
         <p className="px-5 py-4 text-sm text-ink-400">Answer a question to see your per-language scores.</p>
@@ -106,7 +187,7 @@ function LanguageBreakdown({ rows }: { rows: LanguageProgress[] }) {
                   <span className="bar-grow block h-full bg-accent" style={{ width: `${pct}%` }} />
                 </span>
                 <span className="font-mono text-sm text-ink-300">
-                  {r.attempts} · <span className="text-ink-50">{pct}%</span>
+                  {r.attempts} · {Math.round((r.accuracy ?? 0) * 100)}% · <span className="text-ink-50">{pct}%</span>
                 </span>
               </li>
             );
