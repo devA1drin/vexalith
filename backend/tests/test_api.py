@@ -76,7 +76,8 @@ def test_practice_flow_language_skip_and_next(client):
     from app.content.domains import DOMAINS
     assert len(prog["domains"]) == len(DOMAINS)
     assert prog["languages"] and prog["languages"][0]["attempts"] == 1
-    assert all(d["mastery"] >= 0.4 for d in prog["domains"])  # skips don't tank mastery
+    # skips alone don't tank mastery (the answered skill may drop from a weak answer)
+    assert all(d["mastery"] >= 0.4 for d in prog["domains"] if d["domain_slug"] != q2["domain_slug"])
 
 
 def test_python_default_language(client):

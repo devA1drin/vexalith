@@ -38,6 +38,10 @@ semantics, accessibility and parser/form behaviour; for CSS the cascade,
 specificity, box model and layout algorithms; for PHP loose vs strict
 comparison, references, array semantics and injection/XSS safety; for logic
 problems accept any valid proof, not just the reference wording.
+For the "fundamentals" skill the learner may be a complete beginner: write the
+feedback in plain, friendly language, define any term you use (e.g. "falsy",
+"scope", "concatenate"), avoid jargon and Big-O, and walk through the code one
+line at a time in the reference answer.
 Use the teacher rubric when provided, but judge the substance, not keywords.
 Quote the learner when pointing out a misconception.
 
@@ -64,6 +68,10 @@ Create ONE original practice item with a short, self-contained snippet
 problems, no code required). Match the skill domain: e.g. HTML → semantics,
 accessibility, forms, DOM structure; CSS → cascade, specificity, box model,
 flex/grid outcomes; PHP → output tracing, type juggling, arrays, security;
+fundamentals → absolute-beginner basics (variables, types, operators, strings,
+if/else, loops, functions, lists/dicts, null, simple errors; HTML structure and
+tags; CSS selectors, units, box model, display, flexbox; algorithms, pseudocode,
+binary, booleans) with a 3-8 line snippet and plain wording;
 algorithms → approach + correctness + complexity; logic_problems → truth tables,
 boolean simplification, deduction, invariants, sets, sequences.
 The question must require reasoning, not trivia. Return ONLY JSON (no markdown):
