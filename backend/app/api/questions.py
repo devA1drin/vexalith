@@ -16,6 +16,8 @@ router = APIRouter(prefix="/questions", tags=["questions"])
 
 Language = Literal["python", "javascript", "php", "cpp", "html", "css", "general"]
 Focus = Literal["fundamentals"]
+Difficulty = Literal["adaptive", "beginner", "intermediate", "advanced"]
+TOPIC_PATTERN = r"^[a-z_]{2,40}$"
 
 
 def _parse_exclude(raw: str | None) -> set[int]:
@@ -34,11 +36,16 @@ def next_question(
     language: Language = Query("python"),
     exclude: str | None = Query(None, description="Comma-separated question ids to avoid"),
     focus: Focus | None = Query(None, description="Restrict practice to one skill (fundamentals)"),
+    difficulty: Difficulty = Query("adaptive", description="adaptive (Elo) or a fixed level"),
+    topic: str | None = Query(None, pattern=TOPIC_PATTERN, description="Skill-domain slug"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> QuestionOut:
     try:
-        return get_next_question(db, user, language=language, exclude_ids=_parse_exclude(exclude), focus=focus)
+        return get_next_question(
+            db, user, language=language, exclude_ids=_parse_exclude(exclude), focus=focus,
+            difficulty=difficulty, topic=topic,
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -48,6 +55,8 @@ def skip(
     question_id: int,
     language: Language = Query("python"),
     focus: Focus | None = Query(None),
+    difficulty: Difficulty = Query("adaptive"),
+    topic: str | None = Query(None, pattern=TOPIC_PATTERN),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> SkipOut:
@@ -57,7 +66,7 @@ def skip(
     skip_question(db, user=user, question=question)
     nxt = get_next_question(
         db, user, language=language, exclude_ids={question_id}, avoid_domain_ids={question.domain_id},
-        focus=focus,
+        focus=focus, difficulty=difficulty, topic=topic,
     )
     return SkipOut(skipped_question_id=question_id, next_question=nxt)
 

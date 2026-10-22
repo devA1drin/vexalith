@@ -58,6 +58,9 @@ def ensure_user_masteries(db: Session, user: User) -> list[SkillMastery]:
     return list(existing.values())
 
 
+LEVELS = ("beginner", "intermediate", "advanced")
+
+
 def _diff(q: Question) -> str:
     return q.difficulty.value if hasattr(q.difficulty, "value") else str(q.difficulty)
 
@@ -200,9 +203,15 @@ def get_next_question(
     exclude_ids: set[int] | None = None,
     avoid_domain_ids: set[int] | None = None,
     focus: str | None = None,
+    difficulty: str | None = None,
+    topic: str | None = None,
     rng: random.Random | None = None,
 ) -> QuestionOut:
     """Adaptive next question for the user in the chosen language.
+
+    - ``difficulty``: "beginner" / "intermediate" / "advanced" pins the level;
+      None or "adaptive" keeps the Elo-driven level
+    - ``topic``: a skill-domain slug to practise only that skill
 
     - weakest domain first (Elo mastery), difficulty band from mastery
     - never repeats the explicitly excluded / most recently seen questions
@@ -223,6 +232,12 @@ def get_next_question(
         all_in_lang = db.query(Question).all()
     if not all_in_lang:
         raise LookupError("No questions available — seed the database.")
+    level = difficulty if difficulty in LEVELS else None
+    if level:
+        # Chosen level: only questions at that level (same language pool), unless
+        # this language has none at all.
+        at_level = [q for q in all_in_lang if _diff(q) == level]
+        all_in_lang = at_level or all_in_lang
 
     # Only domains that actually have questions for this language are eligible
     # (e.g. no Big-O drills for HTML/CSS).
@@ -246,7 +261,11 @@ def get_next_question(
         if focus == FUNDAMENTALS or onboarding:
             dm_list = [m for m in dm_list if m.domain_id == fund_id] or dm_list
             avoid_domain_ids = None
-            forced_level = fundamentals_level(status)
+            forced_level = level or fundamentals_level(status)
+    topic_id = next((d.id for d in domains.values() if d.slug == topic), None) if topic else None
+    if topic_id is not None and topic_id in available:
+        dm_list = [m for m in dm_list if m.domain_id == topic_id] or dm_list
+        avoid_domain_ids = None
     # After a skip, move on to a different skill when one is available.
     if avoid_domain_ids:
         others = [m for m in dm_list if m.domain_id not in avoid_domain_ids]
@@ -265,7 +284,7 @@ def get_next_question(
         dm_list,
         key=lambda m: (round(m.mastery * 10), m.attempts, -recent_domains.get(m.domain_id, 10_000)),
     )
-    preferred = forced_level or adaptive.mastery_to_difficulty(
+    preferred = forced_level or level or adaptive.mastery_to_difficulty(
         weakest.mastery, offset=settings.target_difficulty_offset
     )
     domain = domains[weakest.domain_id]
