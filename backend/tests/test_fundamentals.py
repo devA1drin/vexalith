@@ -3,7 +3,7 @@
 from tests.conftest import auth
 from tests.test_languages import graduate
 
-LANGS = ["python", "javascript", "php", "html", "css", "general"]
+LANGS = ["python", "javascript", "php", "cpp", "html", "css", "general"]
 
 
 def test_new_user_starts_with_fundamentals_level_one_in_every_language(client):
@@ -79,3 +79,14 @@ def test_onboarding_mostly_uses_the_chosen_language(client):
         q = client.get("/api/questions/next?language=php", headers=auth(pid=f"fund-mix-{i}")).json()
         langs.append(q["language"])
     assert langs.count("php") >= 4  # ~75% expected; loose bound keeps it deterministic in practice
+
+
+def test_cpp_onboarding_skips_rotate_without_repeats(client):
+    h = auth(pid="fund-cpp-skip")
+    q = client.get("/api/questions/next?language=cpp", headers=h).json()
+    seen = [q["id"]]
+    for _ in range(8):
+        q = client.post(f"/api/questions/{q['id']}/skip?language=cpp", headers=h).json()["next_question"]
+        assert q["domain_slug"] == "fundamentals" and q["language"] in {"cpp", "general"}
+        assert q["id"] not in seen
+        seen.append(q["id"])
