@@ -71,3 +71,11 @@ def test_focus_mode_keeps_fundamentals_after_graduation(client):
 def test_unknown_focus_rejected(client):
     r = client.get("/api/questions/next?language=python&focus=debugging", headers=auth(pid="fund-x"))
     assert r.status_code == 422
+
+
+def test_onboarding_mostly_uses_the_chosen_language(client):
+    langs = []
+    for i in range(12):
+        q = client.get("/api/questions/next?language=php", headers=auth(pid=f"fund-mix-{i}")).json()
+        langs.append(q["language"])
+    assert langs.count("php") >= 4  # ~75% expected; loose bound keeps it deterministic in practice
