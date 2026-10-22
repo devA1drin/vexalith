@@ -103,10 +103,17 @@ class DomainProgress(BaseModel):
     attempts: int
 
 
+class LanguageProgress(BaseModel):
+    language: str
+    attempts: int
+    average_score: float
+
+
 class ProgressOut(BaseModel):
     user_id: int
     display_name: str
     domains: list[DomainProgress]
+    languages: list[LanguageProgress] = []
     total_responses: int
     total_skips: int = 0
     average_mastery: float

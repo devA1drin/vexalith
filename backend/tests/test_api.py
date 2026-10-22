@@ -41,7 +41,7 @@ def test_me_upserts_user_by_provider_identity(client):
 def test_practice_flow_language_skip_and_next(client):
     h = auth(pid="3001")
     q1 = client.get("/api/questions/next?language=javascript", headers=h).json()
-    assert q1["language"] == "javascript" and q1["code"]
+    assert q1["language"] in {"javascript", "general"} and q1["code"]
     r = client.get("/api/questions/next?language=javascript", headers=h)
     assert r.headers.get("cache-control") == "no-store"
 
@@ -73,13 +73,15 @@ def test_practice_flow_language_skip_and_next(client):
     prog = client.get("/api/progress", headers=h).json()
     assert prog["total_responses"] == 1
     assert prog["total_skips"] == 6
-    assert len(prog["domains"]) == 6
+    from app.content.domains import DOMAINS
+    assert len(prog["domains"]) == len(DOMAINS)
+    assert prog["languages"] and prog["languages"][0]["attempts"] == 1
     assert all(d["mastery"] >= 0.4 for d in prog["domains"])  # skips don't tank mastery
 
 
 def test_python_default_language(client):
     q = client.get("/api/questions/next", headers=auth(pid="3002")).json()
-    assert q["language"] == "python"
+    assert q["language"] in {"python", "general"}
 
 
 def test_product_feedback_validation_rate_limit_and_privacy(client):

@@ -23,13 +23,23 @@ from app.schemas.schemas import FeedbackPayload, Finding, ReasoningGap
 logger = logging.getLogger(__name__)
 
 FEEDBACK_SYSTEM = """You are Vexalith, a rigorous but encouraging programming tutor.
-A learner was shown a code snippet and a question (predict output, find a bug,
-analyse complexity, list edge cases, review design, or choose a data structure).
-Grade their free-text explanation for CORRECTNESS (is the technical claim right:
-exact output, real root cause, correct Big-O, relevant edge cases?) and
-REASONING (do they justify it by tracing the code / counting operations /
-explaining the mechanism?). Use the teacher rubric when provided, but judge the
-substance, not keywords. Quote the learner when pointing out a misconception.
+A learner was shown a snippet (Python, JavaScript, PHP, HTML, CSS, or a
+language-agnostic "general" problem statement) and a question: predict output or
+rendering, find a bug, analyse complexity, list edge cases, review design or
+security, choose a data structure, explain an algorithm (approach, correctness,
+complexity), or solve a logic problem (truth tables, boolean algebra, deduction,
+invariants, sets, sequences).
+Grade their free-text explanation for CORRECTNESS (is the claim right: exact
+output, real root cause, correct Big-O, correct cascade/specificity result,
+valid deduction?) and REASONING (do they justify it by tracing the code,
+counting operations, citing the language/browser rule, an invariant or an
+exchange argument, or a case analysis?). Language notes: for HTML judge
+semantics, accessibility and parser/form behaviour; for CSS the cascade,
+specificity, box model and layout algorithms; for PHP loose vs strict
+comparison, references, array semantics and injection/XSS safety; for logic
+problems accept any valid proof, not just the reference wording.
+Use the teacher rubric when provided, but judge the substance, not keywords.
+Quote the learner when pointing out a misconception.
 
 Return ONLY a JSON object (no markdown) with exactly these keys:
 {
@@ -48,9 +58,15 @@ Return ONLY a JSON object (no markdown) with exactly these keys:
 """
 
 QUESTION_SYSTEM = """You are a curriculum designer for programming critical thinking.
-Create ONE original practice item with a short, self-contained code snippet
-(5-20 lines) in the requested language. The question must require reasoning,
-not trivia. Return ONLY JSON (no markdown):
+Create ONE original practice item with a short, self-contained snippet
+(5-20 lines) in the requested language: python, javascript, php, html, css, or
+"general" (a plain-text problem statement for logic puzzles or algorithm
+problems, no code required). Match the skill domain: e.g. HTML → semantics,
+accessibility, forms, DOM structure; CSS → cascade, specificity, box model,
+flex/grid outcomes; PHP → output tracing, type juggling, arrays, security;
+algorithms → approach + correctness + complexity; logic_problems → truth tables,
+boolean simplification, deduction, invariants, sets, sequences.
+The question must require reasoning, not trivia. Return ONLY JSON (no markdown):
 {
   "title": string,
   "code": string,

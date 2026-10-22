@@ -3,7 +3,8 @@
  * which attaches a short-lived backend JWT derived from the Auth.js session.
  */
 
-export type Language = "python" | "javascript";
+export type Language = "python" | "javascript" | "php" | "html" | "css" | "general";
+export const LANGUAGE_IDS: Language[] = ["python", "javascript", "php", "html", "css", "general"];
 
 export type Finding = { name: string; explanation: string; evidence_span?: string | null; confidence: number };
 export type ReasoningGap = { description: string; how_to_improve: string };
@@ -37,10 +38,12 @@ export type Question = {
 
 export type ResponseOut = { id: number; question_id: number; answer_text: string; created_at: string; feedback: FeedbackPayload };
 export type DomainProgress = { domain_slug: string; domain_name: string; mastery: number; attempts: number };
+export type LanguageProgress = { language: string; attempts: number; average_score: number };
 export type ProgressOut = {
   user_id: number;
   display_name: string;
   domains: DomainProgress[];
+  languages?: LanguageProgress[];
   total_responses: number;
   total_skips: number;
   average_mastery: number;
