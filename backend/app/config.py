@@ -61,6 +61,8 @@ class Settings(BaseSettings):
 
     # Shared secret for HS256 JWTs minted by the Next.js server (Auth.js session).
     backend_jwt_secret: str = ""
+    # Optional admin maintenance token (sensitive). Admin routes are disabled when unset.
+    admin_token: str = ""
 
     # Product feedback spam protection
     feedback_max_per_hour: int = 5

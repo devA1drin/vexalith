@@ -12,7 +12,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import feedback, meta, progress, questions, responses, users
+from app.api import admin, feedback, meta, progress, questions, responses, users
 from app.config import get_settings
 from app.db.session import SessionLocal, engine
 from app.models.models import Question
@@ -43,7 +43,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-for r in (users.router, questions.router, responses.router, progress.router, feedback.router, meta.router):
+for r in (users.router, questions.router, responses.router, progress.router, feedback.router, meta.router, admin.router):
     app.include_router(r, prefix="/api")
 
 _db_ready = False
