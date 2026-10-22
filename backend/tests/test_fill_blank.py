@@ -68,3 +68,11 @@ def test_explain_questions_are_unaffected():
     q = next(x for x in SEED_QUESTIONS if "kind" not in x["rubric"])
     fb = grade(q["rubric"]["reference_answer"], _ctx(q))
     assert fb.verdict == "correct"
+
+
+def test_identifier_boundaries_are_respected():
+    assert fill_blank_hit("background-color: red", ["color: red"]) is None
+    assert fill_blank_hit("color:red;", ["color: red"])
+    assert fill_blank_hit("i < 30", ["i < 3"]) is None
+    assert fill_blank_hit("let", ["let"]) and fill_blank_hit("outlet", ["let"]) is None
+    assert fill_blank_hit("int &x", ["int& x"]) and fill_blank_hit("return  a;", ["return a"])

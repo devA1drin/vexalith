@@ -57,18 +57,35 @@ _QUOTES = str.maketrans({"'": '"', "`": '"', "\u2018": '"', "\u2019": '"', "\u20
 
 
 def _code_norm(text: str) -> str:
-    """Normalise code for blank matching: no whitespace, lower case, one quote style, no trailing ;."""
-    return _despace(text).translate(_QUOTES).rstrip(";")
+    """Normalise code for blank matching.
+
+    Lower case, one quote style, single spaces only between word characters
+    (so "i < 3" == "i<3" but "return a" keeps its word boundary), no trailing ;.
+    """
+    t = _WS.sub(" ", text.lower().translate(_QUOTES)).strip()
+    t = re.sub(r"\s*([^\w\s])\s*", r"\1", t)
+    return t.rstrip(";")
+
+
+def _contains_code(haystack: str, needle: str) -> bool:
+    """Substring match that respects identifier boundaries ("color" is not in "background-color")."""
+    if not needle:
+        return False
+    pat = re.escape(needle)
+    if re.match(r"\w", needle):
+        pat = r"(?<![\w-])" + pat
+    if re.search(r"\w$", needle):
+        pat += r"(?!\w)"
+    return re.search(pat, haystack) is not None
 
 
 def fill_blank_hit(answer: str, accepted: list[str]) -> str | None:
     """Return the accepted answer the learner supplied (equivalent forms allowed), if any."""
     norm = _code_norm(answer)
-    # Also accept the answer with semicolons removed everywhere ("i++;" vs "i++").
-    loose = norm.replace(";", "")
+    loose = norm.replace(";", "")  # "i++;" vs "i++", "{return a>b;}" vs "{return a>b}"
     for acc in accepted:
         a = _code_norm(acc)
-        if a and (a in norm or a.replace(";", "") in loose):
+        if _contains_code(norm, a) or _contains_code(loose, a.replace(";", "")):
             return acc
     return None
 
