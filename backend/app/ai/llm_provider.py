@@ -49,6 +49,13 @@ must supply the missing code: accept any equivalent code (different spacing,
 quote style, a trailing semicolon, an equivalent expression such as i += 1
 for i++), not only the listed accepted_answers; a short answer that is just the
 right code is correct, so judge reasoning leniently there.
+The learner may answer in English, Filipino (Tagalog) or Taglish (Tagalog and
+English mixed in one sentence, e.g. "Nagpi-print siya ng 5 kasi copy lang ang
+value"). Grade the ideas, not the language: a correct explanation in Filipino or
+Taglish gets the same score as the same explanation in English, and never lower
+a score for grammar, spelling or code-switching. Code, identifiers and keywords
+stay as written. Write strengths, gaps and suggestions in simple English (the
+learner understands English); you may quote their Filipino words as evidence.
 Use the teacher rubric when provided, but judge the substance, not keywords.
 Quote the learner when pointing out a misconception.
 
