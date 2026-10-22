@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import random
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -28,7 +29,7 @@ from app.schemas.schemas import (
     ProgressOut,
     QuestionOut,
 )
-from app.services import adaptive, hints
+from app.services import adaptive, daily, hints
 
 
 def ensure_user_masteries(db: Session, user: User) -> list[SkillMastery]:
@@ -347,8 +348,9 @@ def submit_response(
     user: User,
     question: Question,
     answer_text: str,
+    now: datetime | None = None,
 ) -> tuple[Response, FeedbackPayload]:
-    """Persist response, run AI feedback, update mastery (Elo)."""
+    """Persist response, run AI feedback, update mastery (Elo), mark the daily challenge."""
     settings = get_settings()
     provider = get_ai_provider()
     domain = db.get(SkillDomain, question.domain_id)
@@ -377,6 +379,12 @@ def submit_response(
     response = Response(user_id=user.id, question_id=question.id, answer_text=answer_text)
     db.add(response)
     db.flush()
+
+    # Daily challenge: answering today's question (any score) completes it.
+    if daily.record_if_daily(db, user, question, payload.overall_score, now=now):
+        db.flush()
+        payload.daily_completed = True
+        payload.daily_streak = daily.streaks(set(daily.user_days(db, user)), daily.manila_today(now))[0]
 
     db.add(
         Feedback(

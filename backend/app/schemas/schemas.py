@@ -92,6 +92,8 @@ class FeedbackPayload(BaseModel):
     accepted_answers: list[str] = Field(default_factory=list)  # fill-in questions: correct code
     hints_used: int = 0
     hint_penalty: float = 0.0
+    daily_completed: bool = False  # this answer completed today's daily challenge
+    daily_streak: int = 0
     raw_explanation: str = ""
     provider_used: str = "heuristic"
 
@@ -174,6 +176,40 @@ class RecommendationsOut(BaseModel):
     topics: list[TopicTip] = []
     languages: list[LanguageTip] = []
     next_questions: list[QuestionOut] = []
+
+
+# ── Daily challenge ──────────────────────────────────────────────────────────
+
+
+class DailyOut(BaseModel):
+    """Public summary of today's challenge (same for everyone)."""
+
+    date: str  # YYYY-MM-DD, Asia/Manila
+    timezone: str = "Asia/Manila"
+    resets_at: datetime
+    question_id: int
+    title: str
+    language: str
+    domain_slug: str
+    domain_name: str
+    difficulty: str
+    kind: str = "explain"
+
+
+class DailyDay(BaseModel):
+    date: str
+    done: bool
+    score: float | None = None
+
+
+class DailyMeOut(DailyOut):
+    question: QuestionOut
+    completed: bool
+    score: float | None = None
+    current_streak: int
+    best_streak: int
+    total_completed: int
+    last_days: list[DailyDay] = []
 
 
 # ── Product feedback ─────────────────────────────────────────────────────────
