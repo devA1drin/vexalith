@@ -127,6 +127,29 @@ class LanguageProgress(BaseModel):
     language: str
     attempts: int
     average_score: float
+    correct: int = 0
+    accuracy: float = 0.0
+
+
+class ProgressDay(BaseModel):
+    """One Asia/Manila calendar day in the progress trend."""
+
+    date: str
+    answers: int
+    correct: int
+    average_score: float | None = None
+
+
+class RecentAttempt(BaseModel):
+    question_id: int
+    title: str
+    language: str
+    domain_name: str
+    difficulty: str
+    verdict: str
+    score: float
+    hints_used: int = 0
+    created_at: datetime
 
 
 class FundamentalsStatus(BaseModel):
@@ -148,6 +171,20 @@ class ProgressOut(BaseModel):
     total_responses: int
     total_skips: int = 0
     average_mastery: float
+    # Progress v2
+    questions_answered: int = 0  # distinct questions attempted
+    questions_solved: int = 0  # distinct questions answered correctly at least once
+    correct_answers: int = 0
+    accuracy: float = 0.0  # correct answers / answers
+    average_score: float = 0.0
+    improvement: float | None = None  # mean of the latest answers minus the ones before
+    hints_used: int = 0
+    history: list[ProgressDay] = []
+    recent: list[RecentAttempt] = []
+    current_streak: int = 0
+    best_streak: int = 0
+    daily_done_today: bool = False
+    daily_completed: int = 0
 
 
 # ── Recommendations ──────────────────────────────────────────────────────────
