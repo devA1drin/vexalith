@@ -5,9 +5,10 @@ from collections import Counter
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
+from app.content.bank import SEED_QUESTIONS
 from tests.conftest import auth
 
-MARKUP_DOMAINS = {"code_tracing", "debugging", "edge_cases_testing", "code_review_design", "logic_problems", "algorithms"}
+MARKUP_DOMAINS = {"fundamentals", "code_tracing", "debugging", "edge_cases_testing", "code_review_design", "logic_problems", "algorithms"}
 
 
 def _walk(client, h, lang, n=25):
@@ -30,15 +31,29 @@ def test_each_language_returns_appropriate_questions(client):
         assert all(a["id"] != b["id"] for a, b in zip(qs, qs[1:]))
 
 
+def graduate(client, h, lang, n=5):
+    """Answer n fundamentals questions with their model answers so onboarding ends."""
+    for _ in range(n):
+        q = client.get(f"/api/questions/next?language={lang}", headers=h).json()
+        assert q["domain_slug"] == "fundamentals"
+        ref = next(x for x in SEED_QUESTIONS if x["title"] == q["title"] and x["language"] == q["language"])
+        r = client.post("/api/responses", headers=h, json={"question_id": q["id"], "answer_text": ref["rubric"]["reference_answer"]})
+        assert r.status_code == 201
+
+
 def test_general_selection_is_language_agnostic(client):
-    qs = _walk(client, auth(pid="lang-general"), "general", n=30)
+    h = auth(pid="lang-general")
+    graduate(client, h, "general")
+    qs = _walk(client, h, "general", n=30)
     assert {q["language"] for q in qs} == {"general"}
-    assert {q["domain_slug"] for q in qs} <= {"logic_problems", "algorithms"}
+    assert {q["domain_slug"] for q in qs} <= {"fundamentals", "logic_problems", "algorithms"}
     assert {"logic_problems", "algorithms"} <= {q["domain_slug"] for q in qs}
 
 
 def test_logic_and_algorithms_surface_under_a_language(client):
-    domains = Counter(q["domain_slug"] for q in _walk(client, auth(pid="lang-mix"), "python", n=60))
+    h = auth(pid="lang-mix")
+    graduate(client, h, "python")
+    domains = Counter(q["domain_slug"] for q in _walk(client, h, "python", n=60))
     assert domains["logic_problems"] > 0 and domains["algorithms"] > 0
 
 

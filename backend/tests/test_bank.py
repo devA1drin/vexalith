@@ -41,7 +41,7 @@ def test_new_language_volume_per_level():
 def test_markup_languages_skip_meaningless_domains():
     for q in SEED_QUESTIONS:
         if q["language"] in ("html", "css"):
-            assert q["domain"] in {"code_tracing", "debugging", "edge_cases_testing", "code_review_design"}, q["title"]
+            assert q["domain"] in {"fundamentals", "code_tracing", "debugging", "edge_cases_testing", "code_review_design"}, q["title"]
 
 
 def test_logic_and_algorithms_volume():
@@ -72,3 +72,15 @@ def test_reference_answers_pass_their_own_rubric():
         ctx = QuestionContext(q["title"], q["language"], q["code"], q["prompt"], q["domain"], q["difficulty"], q["rubric"])
         fb = grade(q["rubric"]["reference_answer"], ctx)
         assert fb.correctness_score >= 0.75 and not fb.misconceptions, q["title"]
+
+
+def test_fundamentals_volume_per_language_and_level():
+    counts = Counter((q["language"], q["difficulty"]) for q in SEED_QUESTIONS if q["domain"] == "fundamentals")
+    minimum = {"python": 8, "javascript": 8, "php": 8, "html": 6, "css": 6, "general": 5}
+    for lang, n in minimum.items():
+        for level in LEVELS:
+            assert counts[(lang, level)] >= n, (lang, level, counts[(lang, level)])
+
+
+def test_fundamentals_is_the_first_domain():
+    assert DOMAINS[0]["slug"] == "fundamentals"
