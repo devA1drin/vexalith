@@ -51,7 +51,8 @@ There are 421 questions in total, including 69 for C++, 35 fill-in-the-missing-c
 1. **Sign in** with GitHub or Google.
 2. **Pick a language.** If you are new, you start with Fundamentals at level 1.
 3. **Answer in your own words.** Say what the code does and why.
-4. **Read your feedback.** You see what you got right, what you missed, and a model answer.
+   Stuck? Press **Show hint**. Every question has 3 hints, shown one at a time: first a way to approach it, then the key idea, then the point your answer must make. Each hint takes 10% off that answer's score (30% at most).
+4. **Read your feedback.** Right or wrong, you get an explanation: the key concept, a checklist of everything a full answer covers (ticked where you got it), any common mistake you made and why it's wrong, and the model answer. For fill-in-the-missing-code questions you also see the correct code.
 
 The app adapts to you. It gives you more questions on the skills you find hardest, and harder questions as you improve.
 Once you have cleared Fundamentals, every topic opens up.
