@@ -8,6 +8,7 @@ User ──< Response >── Question ── SkillDomain
 User ──< QuestionSkip >── Question
 User ──< UserFeedback            (app feedback submitted by signed-in users)
 User ──< HintUsage >── Question  (progressive hints revealed while answering)
+User ──< DailyCompletion >── Question (daily challenge done, one row per Manila day)
 Response ── Feedback (1:1)       (AI feedback on an answer)
 AppMeta                          (schema version for safe re-seeding)
 """
@@ -187,6 +188,20 @@ class HintUsage(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"), index=True)
     level: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class DailyCompletion(Base):
+    """A learner answered that day's daily challenge (day = Asia/Manila calendar date)."""
+
+    __tablename__ = "daily_completions"
+    __table_args__ = (UniqueConstraint("user_id", "day", name="uq_daily_user_day"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    day: Mapped[str] = mapped_column(String(10), index=True)  # YYYY-MM-DD in Asia/Manila
+    question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"))
+    score: Mapped[float] = mapped_column(Float, default=0.0)  # best score that day
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 

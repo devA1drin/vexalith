@@ -2,6 +2,7 @@
 
 from app.models.models import (
     AppMeta,
+    DailyCompletion,
     Feedback,
     HintUsage,
     Question,
@@ -22,6 +23,7 @@ __all__ = [
     "Response",
     "Feedback",
     "HintUsage",
+    "DailyCompletion",
     "SkillMastery",
     "UserFeedback",
 ]

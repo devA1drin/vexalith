@@ -22,6 +22,8 @@ const RULES: Rule[] = [
   { method: "POST", pattern: /^responses$/ },
   { method: "GET", pattern: /^progress$/ },
   { method: "GET", pattern: /^recommendations$/ },
+  { method: "GET", pattern: /^daily$/, public: true },
+  { method: "GET", pattern: /^daily\/me$/ },
   { method: "POST", pattern: /^feedback$/ },
   { method: "GET", pattern: /^feedback\/mine$/ },
   { method: "GET", pattern: /^feedback\/recent$/, public: true },

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import random
+from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -25,10 +26,12 @@ from app.schemas.schemas import (
     FeedbackPayload,
     FundamentalsStatus,
     LanguageProgress,
+    ProgressDay,
     ProgressOut,
+    RecentAttempt,
     QuestionOut,
 )
-from app.services import adaptive, hints
+from app.services import adaptive, daily, hints
 
 
 def ensure_user_masteries(db: Session, user: User) -> list[SkillMastery]:
@@ -347,8 +350,9 @@ def submit_response(
     user: User,
     question: Question,
     answer_text: str,
+    now: datetime | None = None,
 ) -> tuple[Response, FeedbackPayload]:
-    """Persist response, run AI feedback, update mastery (Elo)."""
+    """Persist response, run AI feedback, update mastery (Elo), mark the daily challenge."""
     settings = get_settings()
     provider = get_ai_provider()
     domain = db.get(SkillDomain, question.domain_id)
@@ -377,6 +381,12 @@ def submit_response(
     response = Response(user_id=user.id, question_id=question.id, answer_text=answer_text)
     db.add(response)
     db.flush()
+
+    # Daily challenge: answering today's question (any score) completes it.
+    if daily.record_if_daily(db, user, question, payload.overall_score, now=now):
+        db.flush()
+        payload.daily_completed = True
+        payload.daily_streak = daily.streaks(set(daily.user_days(db, user)), daily.manila_today(now))[0]
 
     db.add(
         Feedback(
@@ -414,7 +424,11 @@ def submit_response(
     return response, payload
 
 
-def get_progress(db: Session, user: User) -> ProgressOut:
+HISTORY_DAYS = 30
+RECENT_ATTEMPTS = 8
+
+
+def get_progress(db: Session, user: User, now: datetime | None = None) -> ProgressOut:
     masteries = ensure_user_masteries(db, user)
     domains = {d.id: d for d in db.query(SkillDomain).all()}
     total = db.query(Response).filter_by(user_id=user.id).count()
@@ -437,20 +451,71 @@ def get_progress(db: Session, user: User) -> ProgressOut:
     avg = (
         sum(r.mastery for r in domain_rows) / len(domain_rows) if domain_rows else 0.0
     )
-    # Per-language breakdown: attempts and mean overall score.
-    lang_rows: dict[str, list[float]] = {}
-    for lang, score in (
-        db.query(Question.language, Feedback.overall_score)
-        .join(Response, Response.question_id == Question.id)
+    # Every graded answer, oldest first (one query).
+    rows = (
+        db.query(Response.question_id, Response.created_at, Feedback.overall_score, Feedback.details,
+                 Question.language, Question.title, Question.domain_id, Question.difficulty)
         .join(Feedback, Feedback.response_id == Response.id)
+        .join(Question, Question.id == Response.question_id)
         .filter(Response.user_id == user.id)
+        .order_by(Response.created_at.asc(), Response.id.asc())
         .all()
-    ):
-        lang_rows.setdefault(lang, []).append(float(score or 0.0))
+    )
+    lang_rows: dict[str, list[tuple[float, bool]]] = {}
+    attempted: set[int] = set()
+    solved: set[int] = set()
+    scores: list[float] = []
+    correct = hints_total = 0
+    by_day: dict[str, list[tuple[float, bool]]] = {}
+    for qid, created, score, details, lang, *_ in rows:
+        ok = (details or {}).get("verdict") == "correct"
+        sc = float(score or 0.0)
+        lang_rows.setdefault(lang, []).append((sc, ok))
+        attempted.add(qid)
+        if ok:
+            solved.add(qid)
+            correct += 1
+        scores.append(sc)
+        hints_total += int((details or {}).get("hints_used") or 0)
+        by_day.setdefault(daily.manila_today(created).isoformat(), []).append((sc, ok))
     languages = [
-        LanguageProgress(language=k, attempts=len(v), average_score=round(sum(v) / len(v), 4))
+        LanguageProgress(
+            language=k, attempts=len(v), average_score=round(sum(x for x, _ in v) / len(v), 4),
+            correct=sum(1 for _, ok in v if ok), accuracy=round(sum(1 for _, ok in v if ok) / len(v), 4),
+        )
         for k, v in sorted(lang_rows.items(), key=lambda kv: -len(kv[1]))
     ]
+    # Improvement: the latest half of (up to) the last 20 answers vs the half before.
+    improvement = None
+    window = scores[-20:]
+    if len(window) >= 4:
+        half = len(window) // 2
+        older, newer = window[:half], window[half:]
+        improvement = round(sum(newer) / len(newer) - sum(older) / len(older), 4)
+    today = daily.manila_today(now)
+    history = []
+    for offset in range(HISTORY_DAYS - 1, -1, -1):
+        key = (today - timedelta(days=offset)).isoformat()
+        day_rows = by_day.get(key, [])
+        history.append(
+            ProgressDay(
+                date=key, answers=len(day_rows), correct=sum(1 for _, ok in day_rows if ok),
+                average_score=round(sum(x for x, _ in day_rows) / len(day_rows), 4) if day_rows else None,
+            )
+        )
+    recent = [
+        RecentAttempt(
+            question_id=qid, title=title, language=lang,
+            domain_name=domains[dom].name if dom in domains else "",
+            difficulty=diff.value if hasattr(diff, "value") else str(diff),
+            verdict=(details or {}).get("verdict") or "partially_correct",
+            score=round(float(score or 0.0), 4), hints_used=int((details or {}).get("hints_used") or 0),
+            created_at=created,
+        )
+        for qid, created, score, details, lang, title, dom, diff in reversed(rows[-RECENT_ATTEMPTS:])
+    ]
+    days_done = daily.user_days(db, user)
+    current, best = daily.streaks(set(days_done), today)
     return ProgressOut(
         user_id=user.id,
         display_name=user.display_name,
@@ -460,4 +525,17 @@ def get_progress(db: Session, user: User) -> ProgressOut:
         total_responses=total,
         total_skips=skips,
         average_mastery=round(avg, 4),
+        questions_answered=len(attempted),
+        questions_solved=len(solved),
+        correct_answers=correct,
+        accuracy=round(correct / len(scores), 4) if scores else 0.0,
+        average_score=round(sum(scores) / len(scores), 4) if scores else 0.0,
+        improvement=improvement,
+        hints_used=hints_total,
+        history=history,
+        recent=recent,
+        current_streak=current,
+        best_streak=best,
+        daily_done_today=today in days_done,
+        daily_completed=len(days_done),
     )
