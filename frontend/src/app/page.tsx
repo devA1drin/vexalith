@@ -4,6 +4,7 @@ import { Hero } from "@/components/Hero";
 import { Reveal } from "@/components/Reveal";
 
 const DOMAINS = [
+  { n: "00", name: "Fundamentals", ask: "Start from zero. Every language.", code: "x = 5; y = x; x = 10  # y?" },
   { n: "01", name: "Code Tracing", ask: "What does this print, line by line?", code: "print(f(1)); print(f(2))" },
   { n: "02", name: "Debugging", ask: "Find the root cause, not the symptom.", code: "for (var i=0;i<3;i++) setTimeout(()=>log(i))" },
   { n: "03", name: "Algorithmic Thinking", ask: "Defend the Big-O. Propose better.", code: "if x in big_list:  # O(?)" },
@@ -76,8 +77,8 @@ export default async function HomePage() {
       {/* Domains as an index, not cards */}
       <section>
         <Reveal className="mb-6 flex items-end justify-between gap-4 border-b border-ink-700 pb-4">
-          <h2 className="font-display text-3xl font-bold tracking-tight text-ink-50">Eight ways reasoning goes wrong.<br className="hidden sm:block" /> Eight drills to catch it.</h2>
-          <span className="label hidden sm:block">178 questions · 3 levels · py / js / php / html / css</span>
+          <h2 className="font-display text-3xl font-bold tracking-tight text-ink-50">Start from your first variable.<br className="hidden sm:block" /> Finish at dynamic programming.</h2>
+          <span className="label hidden sm:block">302 questions · 3 levels · py / js / php / html / css</span>
         </Reveal>
         <ol>
           {DOMAINS.map((d, i) => (
@@ -126,7 +127,7 @@ export default async function HomePage() {
       <Reveal as="section" className="flex flex-col items-start justify-between gap-6 border border-accent p-8 sm:flex-row sm:items-center">
         <div>
           <h2 className="font-display text-2xl font-bold text-ink-50 sm:text-3xl">One question takes about two minutes.</h2>
-          <p className="mt-1 text-ink-300">Pick Python, JavaScript, PHP, HTML or CSS. Explain your thinking. See exactly where it held and where it broke.</p>
+          <p className="mt-1 text-ink-300">New to code? You start with Fundamentals. Pick Python, JavaScript, PHP, HTML or CSS. Explain your thinking. See exactly where it held and where it broke.</p>
         </div>
         <Link href={cta} className="btn-primary shrink-0 px-6 py-3">Start a drill <span className="btn-arrow">→</span></Link>
       </Reveal>
