@@ -336,6 +336,15 @@ def submit_response(
 
     payload = provider.evaluate_response(question=_question_context(question, domain_slug), answer=answer_text)
 
+    # Detailed explanation for every grader: the full list of rubric points, the
+    # model answer, and (fill-in questions) the accepted code.
+    rubric = question.rubric or {}
+    payload.key_points = [c["label"] for c in rubric.get("concepts") or [] if c.get("label")]
+    if rubric.get("kind") == "fill_blank":
+        payload.accepted_answers = list(rubric.get("accepted_answers") or [])
+    if not payload.reference_answer:
+        payload.reference_answer = rubric.get("reference_answer")
+
     # Hints revealed for this attempt cost a little: 10% each, at most 30%.
     used = hints.revealed_levels(db, user, question)
     if used:
