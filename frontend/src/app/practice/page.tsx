@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, ApiError, type FeedbackPayload, type Language, type Question } from "@/lib/api";
+import { api, ApiError, LANGUAGE_IDS, type FeedbackPayload, type Language, type Question } from "@/lib/api";
 import { CodeBlock } from "@/components/CodeBlock";
 import { FeedbackCard } from "@/components/FeedbackCard";
 
@@ -9,6 +9,10 @@ const LANG_KEY = "vexalith_language";
 const LANGS: { id: Language; label: string }[] = [
   { id: "python", label: "Python" },
   { id: "javascript", label: "JavaScript" },
+  { id: "php", label: "PHP" },
+  { id: "html", label: "HTML" },
+  { id: "css", label: "CSS" },
+  { id: "general", label: "General" },
 ];
 const LEVEL: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3 };
 
@@ -62,7 +66,7 @@ export default function PracticePage() {
     if (initialized.current) return;
     initialized.current = true;
     const saved = localStorage.getItem(LANG_KEY);
-    const lang: Language = saved === "javascript" ? "javascript" : "python";
+    const lang: Language = LANGUAGE_IDS.includes(saved as Language) ? (saved as Language) : "python";
     setLanguage(lang);
     loadNext(lang);
   }, [loadNext]);
@@ -112,8 +116,12 @@ export default function PracticePage() {
           <p className="label mb-2">01 · Practice{count > 0 && ` · drill ${String(count).padStart(2, "0")}`}</p>
           <h1 className="font-display text-4xl font-bold tracking-tight text-ink-50">Reason it out.</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex border border-ink-700" role="radiogroup" aria-label="Language">
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="grid grid-cols-3 gap-px border border-ink-700 bg-ink-700 sm:grid-cols-6"
+            role="radiogroup"
+            aria-label="Language"
+          >
             {LANGS.map((l) => (
               <button
                 key={l.id}
@@ -123,8 +131,9 @@ export default function PracticePage() {
                 onClick={() => onLanguage(l.id)}
                 disabled={busy !== null}
                 data-lang={l.id}
+                title={l.id === "general" ? "Language-agnostic logic and algorithm problems" : undefined}
                 className={`px-3 py-1.5 font-mono text-[12px] uppercase tracking-wider transition-colors ${
-                  language === l.id ? "bg-accent text-ink-950" : "text-ink-300 hover:text-ink-50"
+                  language === l.id ? "bg-accent text-ink-950" : "bg-ink-950 text-ink-300 hover:text-ink-50"
                 }`}
               >
                 {l.label}
@@ -148,6 +157,8 @@ export default function PracticePage() {
           key={`${question.id}-${count}`}
           className={`card ${leaving ? "q-leave" : "q-enter"}`}
           data-question-id={question.id}
+          data-domain={question.domain_slug}
+          data-language={question.language}
           aria-busy={leaving}
         >
           <div className="flex flex-wrap items-center gap-2 border-b border-ink-700 px-4 py-3 sm:px-6">

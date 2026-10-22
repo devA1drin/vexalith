@@ -10,6 +10,8 @@ const DOMAINS = [
   { n: "04", name: "Edge Cases & Testing", ask: "Which input breaks it?", code: "avg = sum(xs) / len(xs)" },
   { n: "05", name: "Code Review & Design", ask: "What would you change before merge?", code: "function calc(a, b, mode, flag2) {…}" },
   { n: "06", name: "Data Structures", ask: "Pick the right shape for the data.", code: "queue.pop(0)  # cost?" },
+  { n: "07", name: "Algorithms", ask: "Approach, proof, complexity.", code: "dp[i] = max(dp[i-1], dp[i-2] + v[i])" },
+  { n: "08", name: "Logic Problems", ask: "Deduce it. Prove it.", code: "¬(A ∧ B) ≡ ¬A ∨ ¬B" },
 ];
 
 const CODE = [
@@ -74,8 +76,8 @@ export default async function HomePage() {
       {/* Domains as an index, not cards */}
       <section>
         <Reveal className="mb-6 flex items-end justify-between gap-4 border-b border-ink-700 pb-4">
-          <h2 className="font-display text-3xl font-bold tracking-tight text-ink-50">Six ways code goes wrong.<br className="hidden sm:block" /> Six drills to catch it.</h2>
-          <span className="label hidden sm:block">72 questions · 3 levels · py / js</span>
+          <h2 className="font-display text-3xl font-bold tracking-tight text-ink-50">Eight ways reasoning goes wrong.<br className="hidden sm:block" /> Eight drills to catch it.</h2>
+          <span className="label hidden sm:block">178 questions · 3 levels · py / js / php / html / css</span>
         </Reveal>
         <ol>
           {DOMAINS.map((d, i) => (
@@ -124,7 +126,7 @@ export default async function HomePage() {
       <Reveal as="section" className="flex flex-col items-start justify-between gap-6 border border-accent p-8 sm:flex-row sm:items-center">
         <div>
           <h2 className="font-display text-2xl font-bold text-ink-50 sm:text-3xl">One question takes about two minutes.</h2>
-          <p className="mt-1 text-ink-300">Pick Python or JavaScript. Explain your thinking. See exactly where it held and where it broke.</p>
+          <p className="mt-1 text-ink-300">Pick Python, JavaScript, PHP, HTML or CSS. Explain your thinking. See exactly where it held and where it broke.</p>
         </div>
         <Link href={cta} className="btn-primary shrink-0 px-6 py-3">Start a drill <span className="btn-arrow">→</span></Link>
       </Reveal>

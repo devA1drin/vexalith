@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.ai.provider import QuestionContext, get_ai_provider
 from app.config import get_settings
+from app.content.domains import GENERAL
 from app.models.models import (
     Difficulty,
     Feedback,
@@ -19,7 +20,7 @@ from app.models.models import (
     SkillMastery,
     User,
 )
-from app.schemas.schemas import FeedbackPayload, ProgressOut, DomainProgress, QuestionOut
+from app.schemas.schemas import DomainProgress, FeedbackPayload, LanguageProgress, ProgressOut, QuestionOut
 from app.services import adaptive
 
 
@@ -140,6 +141,7 @@ def get_next_question(
     *,
     language: str = "python",
     exclude_ids: set[int] | None = None,
+    avoid_domain_ids: set[int] | None = None,
     rng: random.Random | None = None,
 ) -> QuestionOut:
     """Adaptive next question for the user in the chosen language.
@@ -154,6 +156,19 @@ def get_next_question(
     masteries = ensure_user_masteries(db, user)
     domains = {d.id: d for d in db.query(SkillDomain).all()}
 
+    # Language pool: the chosen language plus language-agnostic questions
+    # ("general": logic puzzles, prose algorithm problems). "general" alone is
+    # also a valid selection.
+    pool_langs = [GENERAL] if language == GENERAL else [language, GENERAL]
+    all_in_lang = db.query(Question).filter(Question.language.in_(pool_langs)).all()
+    if not all_in_lang:
+        all_in_lang = db.query(Question).all()
+    if not all_in_lang:
+        raise LookupError("No questions available — seed the database.")
+
+    # Only domains that actually have questions for this language are eligible
+    # (e.g. no Big-O drills for HTML/CSS).
+    available = {q.domain_id for q in all_in_lang}
     dm_list = [
         adaptive.DomainMastery(
             domain_id=m.domain_id,
@@ -162,26 +177,38 @@ def get_next_question(
             attempts=m.attempts,
         )
         for m in masteries
-        if m.domain_id in domains
+        if m.domain_id in domains and m.domain_id in available
     ]
-    weakest = adaptive.select_weakest_domain(dm_list)
+    # After a skip, move on to a different skill when one is available.
+    if avoid_domain_ids:
+        others = [m for m in dm_list if m.domain_id not in avoid_domain_ids]
+        dm_list = others or dm_list
+    # Weakest skill first, in 0.1 mastery bands so tiny skip nudges don't pin the
+    # learner to one skill; within a band prefer fewer attempts, then the skill
+    # served least recently (round-robin), then random.
+    recent_domains: dict[int, int] = {}
+    recent_qids = _recent_question_ids(db, user, limit=30)
+    if recent_qids:
+        qdom = dict(db.query(Question.id, Question.domain_id).filter(Question.id.in_(recent_qids)).all())
+        for pos, qid in enumerate(recent_qids):
+            recent_domains.setdefault(qdom.get(qid, -1), pos)
+    rng.shuffle(dm_list)
+    weakest = min(
+        dm_list,
+        key=lambda m: (round(m.mastery * 10), m.attempts, -recent_domains.get(m.domain_id, 10_000)),
+    )
     preferred = adaptive.mastery_to_difficulty(weakest.mastery, offset=settings.target_difficulty_offset)
     domain = domains[weakest.domain_id]
 
-    generated = maybe_generate_llm_question(db, domain=domain, difficulty=preferred, language=language)
-    if generated:
-        return _question_out(generated, domain)
-
-    all_in_lang = db.query(Question).filter(Question.language == language).all()
-    if not all_in_lang:
-        all_in_lang = db.query(Question).all()
-    if not all_in_lang:
-        raise LookupError("No questions available — seed the database.")
+    if language != GENERAL:
+        generated = maybe_generate_llm_question(db, domain=domain, difficulty=preferred, language=language)
+        if generated:
+            return _question_out(generated, domain)
 
     answered_ids = {r.question_id for r in db.query(Response.question_id).filter_by(user_id=user.id).all()}
     skipped_ids = {r.question_id for r in db.query(QuestionSkip.question_id).filter_by(user_id=user.id).all()}
     seen_ids = answered_ids | skipped_ids
-    recent = set(_recent_question_ids(db, user, limit=8)) | set(exclude_ids or set())
+    recent = set(_recent_question_ids(db, user, limit=12)) | set(exclude_ids or set())
 
     def choose(pool: list[Question]) -> Question | None:
         fresh = [q for q in pool if q.id not in recent]
@@ -290,10 +317,25 @@ def get_progress(db: Session, user: User) -> ProgressOut:
     avg = (
         sum(r.mastery for r in domain_rows) / len(domain_rows) if domain_rows else 0.0
     )
+    # Per-language breakdown: attempts and mean overall score.
+    lang_rows: dict[str, list[float]] = {}
+    for lang, score in (
+        db.query(Question.language, Feedback.overall_score)
+        .join(Response, Response.question_id == Question.id)
+        .join(Feedback, Feedback.response_id == Response.id)
+        .filter(Response.user_id == user.id)
+        .all()
+    ):
+        lang_rows.setdefault(lang, []).append(float(score or 0.0))
+    languages = [
+        LanguageProgress(language=k, attempts=len(v), average_score=round(sum(v) / len(v), 4))
+        for k, v in sorted(lang_rows.items(), key=lambda kv: -len(kv[1]))
+    ]
     return ProgressOut(
         user_id=user.id,
         display_name=user.display_name,
         domains=domain_rows,
+        languages=languages,
         total_responses=total,
         total_skips=skips,
         average_mastery=round(avg, 4),

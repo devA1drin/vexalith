@@ -21,7 +21,8 @@ def test_old_schema_is_reset_and_reseeded(tmp_path):
         seed_domains_and_questions(db)  # idempotent
         slugs = {d.slug for d in db.query(SkillDomain).all()}
         assert "fallacy_detection" not in slugs and "debugging" in slugs
-        assert db.query(Question).count() == 72
+        from app.content.bank import SEED_QUESTIONS
+        assert db.query(Question).count() == len(SEED_QUESTIONS)
         v = db.execute(text("SELECT value FROM app_meta WHERE key='schema_version'")).scalar()
         assert v == SCHEMA_VERSION
     assert migrate_schema(engine) is False  # second run: no reset

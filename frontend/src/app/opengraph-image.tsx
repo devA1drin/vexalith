@@ -34,7 +34,7 @@ export default function OgImage() {
             <div style={{ width: 4, height: 110, background: "#ff5b2e", marginLeft: 24 }} />
           </div>
         </div>
-        <div style={{ display: "flex", fontSize: 26, color: "#a5a49d" }}>Reasoning drills for programmers · Python · JavaScript</div>
+        <div style={{ display: "flex", fontSize: 26, color: "#a5a49d" }}>Reasoning drills · Python · JavaScript · PHP · HTML · CSS</div>
       </div>
     ),
     size,

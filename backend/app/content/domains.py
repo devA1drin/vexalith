@@ -31,9 +31,34 @@ DOMAINS = [
         "name": "Data Structures",
         "description": "Choose and reason about lists, sets, maps, stacks, queues, heaps, trees, and graphs.",
     },
+    {
+        "slug": "algorithms",
+        "name": "Algorithms",
+        "description": (
+            "Classic problems — searching, sorting, two pointers, sliding window, recursion, dynamic "
+            "programming, graphs and greedy: explain the approach, why it is correct, and its cost."
+        ),
+    },
+    {
+        "slug": "logic_problems",
+        "name": "Logic Problems",
+        "description": (
+            "Language-agnostic reasoning: truth tables, boolean simplification, deduction, "
+            "short-circuit conditionals, invariants, sets and sequences."
+        ),
+    },
 ]
 
 LANGUAGES = [
     {"slug": "python", "name": "Python"},
     {"slug": "javascript", "name": "JavaScript"},
+    {"slug": "php", "name": "PHP"},
+    {"slug": "html", "name": "HTML"},
+    {"slug": "css", "name": "CSS"},
+    {"slug": "general", "name": "General"},
 ]
+
+# Language-agnostic questions (logic puzzles, prose algorithm problems) use this
+# language tag and are eligible under every language selection.
+GENERAL = "general"
+LANGUAGE_SLUGS = [lang["slug"] for lang in LANGUAGES]

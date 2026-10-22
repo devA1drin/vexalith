@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api, ApiError, type ProgressOut } from "@/lib/api";
+import { api, ApiError, type LanguageProgress, type ProgressOut } from "@/lib/api";
 import { MasteryChart } from "@/components/MasteryChart";
 import { CountUp } from "@/components/CountUp";
 
@@ -63,6 +63,7 @@ export default function ProgressPage() {
               </tbody>
             </table>
           </div>
+          <LanguageBreakdown rows={data.languages ?? []} />
         </>
       )}
     </div>
@@ -75,5 +76,40 @@ function Stat({ label, value, suffix = "", i }: { label: string; value: number; 
       <div className="label">{label}</div>
       <div className="mt-2 font-display text-4xl font-bold text-ink-50"><CountUp to={value} delay={i * 80} />{suffix}</div>
     </div>
+  );
+}
+
+const LANG_LABEL: Record<string, string> = {
+  python: "Python", javascript: "JavaScript", php: "PHP", html: "HTML", css: "CSS", general: "General",
+};
+
+function LanguageBreakdown({ rows }: { rows: LanguageProgress[] }) {
+  return (
+    <section aria-labelledby="by-lang" className="card">
+      <div className="flex items-baseline justify-between border-b border-ink-700 px-5 py-3">
+        <h2 id="by-lang" className="label">By language</h2>
+        <span className="label text-ink-500">answers · avg score</span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="px-5 py-4 text-sm text-ink-400">Answer a question to see your per-language scores.</p>
+      ) : (
+        <ul>
+          {rows.map((r) => {
+            const pct = Math.round(r.average_score * 100);
+            return (
+              <li key={r.language} className="grid grid-cols-[6.5rem_1fr_auto] items-center gap-4 border-b border-ink-800 px-5 py-3 last:border-0" data-lang-row={r.language}>
+                <span className="font-mono text-[12px] uppercase tracking-wider text-ink-100">{LANG_LABEL[r.language] ?? r.language}</span>
+                <span className="h-1.5 bg-ink-800" aria-hidden="true">
+                  <span className="bar-grow block h-full bg-accent" style={{ width: `${pct}%` }} />
+                </span>
+                <span className="font-mono text-sm text-ink-300">
+                  {r.attempts} · <span className="text-ink-50">{pct}%</span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }

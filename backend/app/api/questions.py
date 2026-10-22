@@ -13,7 +13,7 @@ from app.services.learning import get_next_question, skip_question
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
-Language = Literal["python", "javascript"]
+Language = Literal["python", "javascript", "php", "html", "css", "general"]
 
 
 def _parse_exclude(raw: str | None) -> set[int]:
@@ -51,5 +51,7 @@ def skip(
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
     skip_question(db, user=user, question=question)
-    nxt = get_next_question(db, user, language=language, exclude_ids={question_id})
+    nxt = get_next_question(
+        db, user, language=language, exclude_ids={question_id}, avoid_domain_ids={question.domain_id}
+    )
     return SkipOut(skipped_question_id=question_id, next_question=nxt)

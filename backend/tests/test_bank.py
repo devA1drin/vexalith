@@ -15,13 +15,43 @@ def test_every_domain_level_has_at_least_four_questions():
             assert counts[(d["slug"], level)] >= 4, (d["slug"], level)
 
 
-def test_both_languages_covered_per_domain_and_level():
-    langs = {lang["slug"] for lang in LANGUAGES}
+CORE = ["code_tracing", "debugging", "algorithmic_thinking", "edge_cases_testing", "code_review_design", "data_structures"]
+
+
+def test_python_and_js_cover_every_core_domain_and_level():
     seen = {(q["domain"], q["difficulty"], q["language"]) for q in SEED_QUESTIONS}
-    for d in DOMAINS:
+    for d in CORE:
         for level in LEVELS:
-            for lang in langs:
-                assert (d["slug"], level, lang) in seen
+            for lang in ("python", "javascript"):
+                assert (d, level, lang) in seen
+
+
+def test_all_languages_are_known():
+    known = {lang["slug"] for lang in LANGUAGES}
+    assert {q["language"] for q in SEED_QUESTIONS} <= known
+
+
+def test_new_language_volume_per_level():
+    counts = Counter((q["language"], q["difficulty"]) for q in SEED_QUESTIONS)
+    for lang in ("html", "css", "php"):
+        for level in LEVELS:
+            assert counts[(lang, level)] >= 6, (lang, level)
+
+
+def test_markup_languages_skip_meaningless_domains():
+    for q in SEED_QUESTIONS:
+        if q["language"] in ("html", "css"):
+            assert q["domain"] in {"code_tracing", "debugging", "edge_cases_testing", "code_review_design"}, q["title"]
+
+
+def test_logic_and_algorithms_volume():
+    counts = Counter((q["domain"], q["difficulty"]) for q in SEED_QUESTIONS)
+    for d in ("logic_problems", "algorithms"):
+        for level in LEVELS:
+            assert counts[(d, level)] >= 8, (d, level)
+    assert all(q["language"] == "general" for q in SEED_QUESTIONS if q["domain"] == "logic_problems")
+    algo_langs = {q["language"] for q in SEED_QUESTIONS if q["domain"] == "algorithms"}
+    assert {"python", "javascript", "php", "general"} <= algo_langs
 
 
 def test_rubrics_are_well_formed_and_titles_unique():

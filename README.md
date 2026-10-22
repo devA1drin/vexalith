@@ -5,7 +5,7 @@
 <h1 align="center">Vexalith</h1>
 <p align="center"><strong>Build Logic. Break Limits.</strong></p>
 <p align="center">
-  Reasoning drills for programmers. Read real Python or JavaScript, then predict the output, find the bug, defend the Big-O, or review the design.<br/>
+  Reasoning drills for programmers. Read real Python, JavaScript, PHP, HTML or CSS, then predict the output, find the bug, defend the Big-O, review the design — or work through algorithm and logic problems.<br/>
   Each answer gets two grades: <em>is it correct</em> and <em>is the reasoning sound</em>.
 </p>
 <p align="center">
@@ -18,10 +18,10 @@
 
 | | |
 |---|---|
-| **6 skills** | Code tracing · Debugging · Algorithmic thinking & complexity · Edge cases & testing · Code review & design · Data structures |
-| **72 questions** | 3 levels (beginner → advanced) × 2 languages (Python, JavaScript), syntax-highlighted |
+| **8 skills** | Code tracing · Debugging · Algorithmic thinking & complexity · Edge cases & testing · Code review & design · Data structures · Algorithms · Logic problems |
+| **178 questions** | 3 levels (beginner → advanced). Python 45 · JavaScript 43 · PHP 24 · HTML 18 · CSS 19 · General 29 (language-agnostic logic and algorithm problems, served under every language or on their own). Syntax-highlighted. HTML/CSS only get skills that make sense for markup (no Big-O drills) |
 | **Explainable grading** | Correctness (70%) + reasoning (30%) − misconception penalties. Shows what held up, what you missed, any misconceptions and a model answer |
-| **Adaptive** | An Elo-style mastery rating per skill picks the next skill and difficulty. Recently seen questions are excluded. Skipping is recorded but only nudges mastery (−0.01) |
+| **Adaptive** | An Elo-style mastery rating per skill picks the next skill and difficulty. Only skills that have questions in the chosen language are eligible; equally weak skills rotate round-robin. Recently seen questions are excluded. Skipping is recorded but only nudges mastery (−0.01) |
 | **Accounts** | Sign in with GitHub or Google (Auth.js v5). Practice, progress and history are tied to your account |
 | **Feedback wall** | Signed-in users send rated feedback. A public wall shows recent entries (never emails). Rate limits, duplicate checks and spam checks run on the server |
 
@@ -33,6 +33,17 @@
   <tr>
     <td><img src="docs/screenshots/progress-desktop.png" alt="Progress dashboard" /></td>
     <td><img src="docs/screenshots/feedback-desktop.png" alt="Feedback page" /></td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/practice-html-desktop.png" alt="HTML question" /></td>
+    <td><img src="docs/screenshots/practice-php-desktop.png" alt="PHP question" /></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/practice-logic-desktop.png" alt="Logic problem" /></td>
+    <td><img src="docs/screenshots/practice-algorithms-desktop.png" alt="Algorithms question" /></td>
   </tr>
 </table>
 
@@ -76,7 +87,7 @@ cd backend
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
 uvicorn app.main:app --reload
-pytest -q                       # 32 tests
+pytest -q                       # 41 tests
 
 # 3) Web on :3000 (in another shell, same exports)
 cd frontend
