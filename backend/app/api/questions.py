@@ -13,7 +13,7 @@ from app.services.learning import get_next_question, skip_question
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
-Language = Literal["python", "javascript", "php", "html", "css", "general"]
+Language = Literal["python", "javascript", "php", "cpp", "html", "css", "general"]
 Focus = Literal["fundamentals"]
 
 
