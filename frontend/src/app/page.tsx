@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { Hero } from "@/components/Hero";
 import { Reveal } from "@/components/Reveal";
 import { Recommendations } from "@/components/Recommendations";
+import { DailyChallengeCard } from "@/components/DailyChallenge";
 
 const DOMAINS = [
   { n: "00", name: "Fundamentals", ask: "Start from zero. Every language.", code: "x = 5; y = x; x = 10  # y?" },
@@ -32,11 +33,10 @@ export default async function HomePage() {
     <div className="space-y-24">
       <Hero ctaHref={cta} signedIn={!!session?.user} />
 
-      {session?.user && (
-        <Reveal as="section">
-          <Recommendations index="00" />
-        </Reveal>
-      )}
+      <Reveal as="section" className="space-y-6">
+        <DailyChallengeCard signedIn={!!session?.user} />
+        {session?.user && <Recommendations index="00" />}
+      </Reveal>
 
       {/* Trace runner: a real snippet executing */}
       <section className="grid gap-10 md:grid-cols-12">
