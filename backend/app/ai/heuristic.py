@@ -1,160 +1,163 @@
 """
-Always-available offline evaluator.
+Offline rubric-based grader for programming explanations.
 
-Uses keyword/length heuristics + optional expected_signals from the question bank.
-No ML dependencies required — used when LLM and HF are unavailable, and as a
-safety net when they fail at runtime.
+Each seeded question stores a rubric:
+  concepts:       [{label, keywords[], weight}]  ideas a correct answer contains
+  misconceptions: [{label, keywords[], explanation}]
+  reference_answer: str
+
+Scoring (explainable):
+  correctness = weighted share of rubric concepts mentioned (keyword/concept match)
+  reasoning   = explanation quality: length + causal/technical reasoning markers
+  overall     = 0.7 * correctness + 0.3 * reasoning − 0.12 per misconception
+A misconception only counts when the primary concept was NOT hit, so an answer
+that says "with let it would print 0 1 2" is not punished for mentioning it.
 """
 
 from __future__ import annotations
 
 import re
 
-from app.ai.provider import AIProvider
-from app.schemas.schemas import FallacyFinding, FeedbackPayload, ReasoningGap
+from app.ai.provider import AIProvider, QuestionContext
+from app.schemas.schemas import FeedbackPayload, Finding, ReasoningGap
 
-# Lightweight keyword → fallacy mapping for demo / portfolio purposes.
-FALLACY_PATTERNS: list[tuple[str, str, re.Pattern[str]]] = [
-    ("ad_hominem", "Attacks the person rather than the argument.",
-     re.compile(r"\b(idiot|stupid|moron|because (he|she|they) (is|are))\b", re.I)),
-    ("slippery_slope", "Assumes a chain of increasingly extreme consequences without evidence.",
-     re.compile(r"\b(will (inevitably|eventually) lead|slippery slope|next thing you know)\b", re.I)),
-    ("false_dilemma", "Presents only two options when more exist.",
-     re.compile(r"\b(either .+ or |only two (choices|options)|must choose between)\b", re.I)),
-    ("hasty_generalization", "Draws a broad conclusion from too little evidence.",
-     re.compile(r"\b(all|everyone|nobody|always|never)\b.{0,40}\b(are|is|do|does)\b", re.I)),
-    ("appeal_to_authority", "Relies on authority without relevant expertise or evidence.",
-     re.compile(r"\b(experts say|as (everyone|they) know|trust (me|them) because)\b", re.I)),
-    ("bandwagon", "Argues something is true because many people believe it.",
-     re.compile(r"\b(everyone (knows|thinks|agrees)|most people|popular opinion)\b", re.I)),
-    ("circular_reasoning", "Uses the conclusion as a premise.",
-     re.compile(r"\b(because it('?s| is) true|true because|obviously true)\b", re.I)),
-    ("post_hoc", "Assumes causation from temporal sequence alone.",
-     re.compile(r"\b(after .+ therefore|caused by|because (of )?(this|that) happened)\b", re.I)),
-]
-
-QUALITY_MARKERS = re.compile(
-    r"\b(because|therefore|however|evidence|assume|assumption|premise|warrant|"
-    r"counterargument|alternative|causal|correlation|bias|fallacy|support)\b",
+REASONING_MARKERS = re.compile(
+    r"\b(because|since|therefore|so that|so the|which means|this means|thus|hence|as a result|"
+    r"instead|however|whereas|otherwise|if|when|until|each|every|iteration|loop|complexity|"
+    r"o\(|edge case|invariant|fix|should|returns?|throws?|raises?)\b",
     re.I,
 )
+_WS = re.compile(r"\s+")
 
 
-def score_answer_heuristically(
-    *,
-    answer: str,
-    domain_slug: str,
-    expected_signals: dict | None = None,
-) -> dict:
-    """Shared scoring used by HeuristicProvider and HFProvider blend."""
-    words = answer.split()
-    length_score = min(1.0, len(words) / 120.0)  # ~120 words ≈ full credit for length
-    marker_hits = len(QUALITY_MARKERS.findall(answer))
-    marker_score = min(1.0, marker_hits / 6.0)
+def _normalize(text: str) -> str:
+    return _WS.sub(" ", text.lower()).strip()
 
-    good_bonus = 0.0
-    if expected_signals:
-        goods = [g.lower() for g in expected_signals.get("good_keywords", [])]
-        hits = sum(1 for g in goods if g in answer.lower())
-        if goods:
-            good_bonus = 0.25 * (hits / len(goods))
 
-    fallacies: list[FallacyFinding] = []
-    for name, expl, pattern in FALLACY_PATTERNS:
-        m = pattern.search(answer)
-        if m:
-            fallacies.append(
-                FallacyFinding(
-                    name=name,
-                    explanation=expl,
-                    evidence_span=m.group(0)[:120],
-                    confidence=0.55,
-                )
-            )
+def _despace(text: str) -> str:
+    return _WS.sub("", text.lower())
 
-    # Trap keywords from seed bank
-    if expected_signals:
-        for trap in expected_signals.get("fallacy_traps", []):
-            if trap.lower() in answer.lower() and not any(f.name == trap for f in fallacies):
-                fallacies.append(
-                    FallacyFinding(
-                        name=trap,
-                        explanation=f"Answer echoes a common '{trap}' trap for this scenario.",
-                        evidence_span=trap,
-                        confidence=0.45,
+
+def keyword_hit(answer_norm: str, answer_compact: str, keyword: str) -> bool:
+    """Match a rubric keyword against the answer.
+
+    Alphanumeric keywords match at a word start (so stems like 'mutat' work and
+    '6' doesn't match '16'); keywords with symbols (e.g. '[1, 9]') also match
+    with whitespace removed on both sides.
+    """
+    kw = keyword.lower().strip()
+    if not kw:
+        return False
+    if re.fullmatch(r"[a-z0-9_ .'-]+", kw) and kw[0].isalnum():
+        return re.search(r"(?<![a-z0-9])" + re.escape(kw), answer_norm) is not None
+    return kw in answer_norm or _despace(kw) in answer_compact
+
+
+def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
+    rubric = question.rubric or {}
+    concepts = rubric.get("concepts") or []
+    misconceptions_r = rubric.get("misconceptions") or []
+    reference = rubric.get("reference_answer")
+
+    norm = _normalize(answer)
+    compact = _despace(answer)
+
+    hit_labels: list[str] = []
+    missed_labels: list[str] = []
+    total_w = 0.0
+    got_w = 0.0
+    primary_hit = False
+    for i, c in enumerate(concepts):
+        w = float(c.get("weight", 1))
+        total_w += w
+        if any(keyword_hit(norm, compact, k) for k in c.get("keywords", [])):
+            got_w += w
+            hit_labels.append(c["label"])
+            if i == 0:
+                primary_hit = True
+        else:
+            missed_labels.append(c["label"])
+    correctness = (got_w / total_w) if total_w else 0.5
+
+    findings: list[Finding] = []
+    if not primary_hit:
+        for m in misconceptions_r:
+            for k in m.get("keywords", []):
+                if keyword_hit(norm, compact, k):
+                    findings.append(
+                        Finding(name=m["label"], explanation=m["explanation"], evidence_span=k, confidence=0.6)
                     )
-                )
+                    break
 
-    overall = 0.45 * length_score + 0.35 * marker_score + good_bonus
-    overall = max(0.05, overall - 0.1 * len(fallacies))
-    overall = round(min(1.0, overall), 3)
+    words = len(answer.split())
+    length_score = min(1.0, words / 60.0)
+    markers = len(REASONING_MARKERS.findall(answer))
+    marker_score = min(1.0, markers / 5.0)
+    reasoning = round(0.5 * length_score + 0.5 * marker_score, 3)
+
+    overall = 0.7 * correctness + 0.3 * reasoning - 0.12 * len(findings)
+    overall = round(max(0.0, min(1.0, overall)), 3)
+    correctness = round(correctness, 3)
+
+    if correctness >= 0.75 and not findings:
+        verdict = "correct"
+    elif correctness >= 0.35:
+        verdict = "partially_correct"
+    else:
+        verdict = "incorrect"
 
     gaps: list[ReasoningGap] = []
-    if length_score < 0.4:
-        gaps.append(
-            ReasoningGap(
-                description="The response is quite short for an open-ended critical analysis.",
-                how_to_improve="Aim for a clear claim, at least one supporting reason, and a consideration of alternatives.",
-            )
-        )
-    if marker_score < 0.3:
-        gaps.append(
-            ReasoningGap(
-                description="Limited use of explicit reasoning language (because, evidence, assumption, etc.).",
-                how_to_improve="Make warrants explicit: state why evidence supports the claim and name assumptions.",
-            )
-        )
-    if not gaps and overall < 0.6:
-        gaps.append(
-            ReasoningGap(
-                description="The argument could engage more deeply with counter-evidence.",
-                how_to_improve="Steelman the opposing view, then explain why your position still holds.",
-            )
-        )
+    if words < 20:
+        gaps.append(ReasoningGap(
+            description="The explanation is very short.",
+            how_to_improve="State your answer, then justify it step by step (what the code does on each relevant line).",
+        ))
+    if marker_score < 0.4:
+        gaps.append(ReasoningGap(
+            description="Little explicit causal reasoning (because / so / therefore / when ...).",
+            how_to_improve="Connect each claim to the code: 'X happens because line N does Y'.",
+        ))
+    for label in missed_labels[:3]:
+        gaps.append(ReasoningGap(description=f"Not addressed: {label}.", how_to_improve=f"Explain {label} explicitly."))
 
-    suggestions = [
-        "State your main claim in one sentence, then list supporting reasons.",
-        "Name at least one assumption your argument depends on.",
-        "Consider an alternative explanation and why it is less plausible.",
-    ]
-    if fallacies:
-        suggestions.insert(0, f"Revise passages that triggered: {', '.join(f.name for f in fallacies)}.")
+    suggestions: list[str] = []
+    if findings:
+        suggestions.append("Re-trace the code line by line; your answer matches a common misconception.")
+    if missed_labels:
+        suggestions.append("Cover the missing points: " + "; ".join(missed_labels[:3]) + ".")
+    if question.domain_slug == "algorithmic_thinking":
+        suggestions.append("Justify Big-O by counting how many times the dominant operation runs.")
+    elif question.domain_slug == "edge_cases_testing":
+        suggestions.append("For each edge case, state the input, the expected result, and the actual result.")
+    elif question.domain_slug == "debugging":
+        suggestions.append("Name the root cause, show a failing input, and give the corrected code.")
+    if not suggestions:
+        suggestions.append("Great work — try explaining an alternative approach and its tradeoffs.")
 
-    return {
-        "fallacies": fallacies,
-        "reasoning_gaps": gaps,
-        "overall_score": overall,
-        "suggestions": suggestions[:4],
-        "domain_scores": {domain_slug: overall},
-    }
+    explanation = (
+        f"Rubric match: {len(hit_labels)}/{len(concepts)} key points "
+        f"(correctness {correctness:.0%}); reasoning quality {reasoning:.0%}"
+        + (f"; {len(findings)} misconception(s) detected." if findings else ".")
+    )
+    return FeedbackPayload(
+        verdict=verdict,
+        correctness_score=correctness,
+        reasoning_score=reasoning,
+        overall_score=overall,
+        strengths=[f"Covered: {h}" for h in hit_labels],
+        missed_concepts=missed_labels,
+        misconceptions=findings,
+        reasoning_gaps=gaps[:4],
+        suggestions=suggestions[:4],
+        domain_scores={question.domain_slug: overall},
+        reference_answer=reference,
+        raw_explanation=explanation,
+        provider_used="heuristic",
+    )
 
 
 class HeuristicProvider(AIProvider):
     name = "heuristic"
 
-    def evaluate_response(
-        self,
-        *,
-        scenario: str,
-        prompt: str,
-        answer: str,
-        domain_slug: str,
-        expected_signals: dict | None = None,
-    ) -> FeedbackPayload:
-        result = score_answer_heuristically(
-            answer=answer,
-            domain_slug=domain_slug,
-            expected_signals=expected_signals,
-        )
-        return FeedbackPayload(
-            fallacies=result["fallacies"],
-            reasoning_gaps=result["reasoning_gaps"],
-            domain_scores=result["domain_scores"],
-            suggestions=result["suggestions"],
-            overall_score=result["overall_score"],
-            raw_explanation=(
-                "Offline heuristic evaluation (keyword patterns + structure markers). "
-                "Configure XAI_API_KEY for Grok-powered feedback."
-            ),
-            provider_used="heuristic",
-        )
+    def evaluate_response(self, *, question: QuestionContext, answer: str) -> FeedbackPayload:
+        return grade(answer, question)

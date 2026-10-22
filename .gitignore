@@ -58,3 +58,6 @@ secrets/
 # Agent tooling installed by Vercel integrations
 .agents/
 skills-lock.json
+
+# TypeScript incremental build info
+*.tsbuildinfo

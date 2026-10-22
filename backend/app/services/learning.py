@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import os
+import random
 
 from sqlalchemy.orm import Session
 
-from app.ai.provider import get_ai_provider
+from app.ai.provider import QuestionContext, get_ai_provider
 from app.config import get_settings
 from app.models.models import (
     Difficulty,
     Feedback,
     Question,
+    QuestionSkip,
     Response,
     SkillDomain,
     SkillMastery,
@@ -48,15 +50,32 @@ def ensure_user_masteries(db: Session, user: User) -> list[SkillMastery]:
     return list(existing.values())
 
 
+def _diff(q: Question) -> str:
+    return q.difficulty.value if hasattr(q.difficulty, "value") else str(q.difficulty)
+
+
 def _question_out(q: Question, domain: SkillDomain) -> QuestionOut:
     return QuestionOut(
         id=q.id,
         domain_slug=domain.slug,
         domain_name=domain.name,
-        difficulty=q.difficulty.value if hasattr(q.difficulty, "value") else str(q.difficulty),
+        difficulty=_diff(q),
+        language=q.language,
         title=q.title,
-        scenario=q.scenario,
+        code=q.code,
         prompt=q.prompt,
+    )
+
+
+def _question_context(q: Question, domain_slug: str) -> QuestionContext:
+    return QuestionContext(
+        title=q.title,
+        language=q.language,
+        code=q.code,
+        prompt=q.prompt,
+        domain_slug=domain_slug,
+        difficulty=_diff(q),
+        rubric=q.rubric,
     )
 
 
@@ -65,11 +84,9 @@ def maybe_generate_llm_question(
     *,
     domain: SkillDomain,
     difficulty: str,
+    language: str,
 ) -> Question | None:
-    """
-    Ask the LLM to create a question when LLM_GENERATE_QUESTIONS=1 (or true).
-    Off by default so /next stays fast and uses the seeded bank.
-    """
+    """Generate a fresh question via the LLM when LLM_GENERATE_QUESTIONS=1 (opt-in)."""
     flag = os.environ.get("LLM_GENERATE_QUESTIONS", "").lower()
     if flag not in {"1", "true", "yes"}:
         return None
@@ -77,19 +94,18 @@ def maybe_generate_llm_question(
     if provider.name != "llm":
         return None
     generated = provider.generate_question(
-        domain_slug=domain.slug,
-        domain_name=domain.name,
-        difficulty=difficulty,
+        domain_slug=domain.slug, domain_name=domain.name, difficulty=difficulty, language=language
     )
-    if not generated or not generated.get("scenario") or not generated.get("prompt"):
+    if not generated:
         return None
     q = Question(
         domain_id=domain.id,
         difficulty=Difficulty(difficulty),
-        title=str(generated.get("title") or f"Generated: {domain.slug}"),
-        scenario=str(generated["scenario"]),
+        language=language,
+        title=str(generated.get("title") or f"Generated: {domain.name}")[:256],
+        code=str(generated["code"]),
         prompt=str(generated["prompt"]),
-        expected_signals=generated.get("expected_signals"),
+        rubric=generated.get("rubric"),
         source="llm",
     )
     db.add(q)
@@ -98,9 +114,43 @@ def maybe_generate_llm_question(
     return q
 
 
-def get_next_question(db: Session, user: User) -> QuestionOut:
-    """Adaptive next question for the user (seed bank by default)."""
+def _recent_question_ids(db: Session, user: User, limit: int) -> list[int]:
+    """Most recent answered or skipped question ids (newest first)."""
+    answered = (
+        db.query(Response.question_id, Response.created_at)
+        .filter(Response.user_id == user.id)
+        .order_by(Response.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    skipped = (
+        db.query(QuestionSkip.question_id, QuestionSkip.created_at)
+        .filter(QuestionSkip.user_id == user.id)
+        .order_by(QuestionSkip.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    merged = sorted(list(answered) + list(skipped), key=lambda r: r[1], reverse=True)
+    return [r[0] for r in merged[:limit]]
+
+
+def get_next_question(
+    db: Session,
+    user: User,
+    *,
+    language: str = "python",
+    exclude_ids: set[int] | None = None,
+    rng: random.Random | None = None,
+) -> QuestionOut:
+    """Adaptive next question for the user in the chosen language.
+
+    - weakest domain first (Elo mastery), difficulty band from mastery
+    - never repeats the explicitly excluded / most recently seen questions
+      (answered OR skipped) while alternatives exist
+    - random choice among equally good candidates so Skip/Next feel fresh
+    """
     settings = get_settings()
+    rng = rng or random.Random()
     masteries = ensure_user_masteries(db, user)
     domains = {d.id: d for d in db.query(SkillDomain).all()}
 
@@ -115,48 +165,54 @@ def get_next_question(db: Session, user: User) -> QuestionOut:
         if m.domain_id in domains
     ]
     weakest = adaptive.select_weakest_domain(dm_list)
-    preferred = adaptive.mastery_to_difficulty(
-        weakest.mastery, offset=settings.target_difficulty_offset
-    )
+    preferred = adaptive.mastery_to_difficulty(weakest.mastery, offset=settings.target_difficulty_offset)
     domain = domains[weakest.domain_id]
 
-    # Optional LLM generation (explicit opt-in).
-    generated = maybe_generate_llm_question(db, domain=domain, difficulty=preferred)
+    generated = maybe_generate_llm_question(db, domain=domain, difficulty=preferred, language=language)
     if generated:
         return _question_out(generated, domain)
 
-    questions = (
-        db.query(Question)
-        .filter(Question.domain_id == weakest.domain_id)
-        .all()
-    )
-    if not questions:
-        questions = db.query(Question).all()
-
-    seen_ids = {
-        r.question_id
-        for r in db.query(Response).filter_by(user_id=user.id).all()
-    }
-    candidates = [
-        {
-            "id": q.id,
-            "difficulty": q.difficulty.value if hasattr(q.difficulty, "value") else str(q.difficulty),
-            "obj": q,
-        }
-        for q in questions
-    ]
-    picked = adaptive.pick_question(
-        candidates=candidates,
-        seen_ids=seen_ids,
-        preferred_difficulty=preferred,
-    )
-    if not picked:
+    all_in_lang = db.query(Question).filter(Question.language == language).all()
+    if not all_in_lang:
+        all_in_lang = db.query(Question).all()
+    if not all_in_lang:
         raise LookupError("No questions available — seed the database.")
 
-    q: Question = picked["obj"]
+    answered_ids = {r.question_id for r in db.query(Response.question_id).filter_by(user_id=user.id).all()}
+    skipped_ids = {r.question_id for r in db.query(QuestionSkip.question_id).filter_by(user_id=user.id).all()}
+    seen_ids = answered_ids | skipped_ids
+    recent = set(_recent_question_ids(db, user, limit=8)) | set(exclude_ids or set())
+
+    def choose(pool: list[Question]) -> Question | None:
+        fresh = [q for q in pool if q.id not in recent]
+        if not fresh:
+            return None
+        cands = [{"id": q.id, "difficulty": _diff(q), "obj": q} for q in fresh]
+        rng.shuffle(cands)
+        picked = adaptive.pick_question(candidates=cands, seen_ids=seen_ids, preferred_difficulty=preferred)
+        return picked["obj"] if picked else None
+
+    in_domain = [q for q in all_in_lang if q.domain_id == domain.id]
+    q = choose(in_domain) or choose(all_in_lang)
+    if q is None:
+        # Everything is "recent": at least avoid the explicitly excluded ids.
+        pool = [x for x in all_in_lang if x.id not in (exclude_ids or set())] or all_in_lang
+        q = rng.choice(pool)
     d = domains.get(q.domain_id) or db.get(SkillDomain, q.domain_id)
     assert d is not None
     return _question_out(q, d)
+
+
+SKIP_MASTERY_NUDGE = 0.01  # skipping is not failing: tiny nudge, attempts unchanged
+
+
+def skip_question(db: Session, *, user: User, question: Question) -> None:
+    """Record a skip. Mastery decreases only slightly; attempts are not counted."""
+    db.add(QuestionSkip(user_id=user.id, question_id=question.id))
+    ensure_user_masteries(db, user)
+    row = db.query(SkillMastery).filter_by(user_id=user.id, domain_id=question.domain_id).one()
+    row.mastery = round(max(0.0, row.mastery - SKIP_MASTERY_NUDGE), 4)
+    db.commit()
 
 
 def submit_response(
@@ -166,53 +222,44 @@ def submit_response(
     question: Question,
     answer_text: str,
 ) -> tuple[Response, FeedbackPayload]:
-    """Persist response, run AI feedback, update mastery."""
+    """Persist response, run AI feedback, update mastery (Elo)."""
     settings = get_settings()
     provider = get_ai_provider()
     domain = db.get(SkillDomain, question.domain_id)
     domain_slug = domain.slug if domain else "unknown"
 
-    payload = provider.evaluate_response(
-        scenario=question.scenario,
-        prompt=question.prompt,
-        answer=answer_text,
-        domain_slug=domain_slug,
-        expected_signals=question.expected_signals,
-    )
+    payload = provider.evaluate_response(question=_question_context(question, domain_slug), answer=answer_text)
 
-    response = Response(
-        user_id=user.id,
-        question_id=question.id,
-        answer_text=answer_text,
-    )
+    response = Response(user_id=user.id, question_id=question.id, answer_text=answer_text)
     db.add(response)
     db.flush()
 
-    fb = Feedback(
-        response_id=response.id,
-        fallacies=[f.model_dump() for f in payload.fallacies],
-        reasoning_gaps=[g.model_dump() for g in payload.reasoning_gaps],
-        domain_scores=payload.domain_scores,
-        suggestions=payload.suggestions,
-        overall_score=payload.overall_score,
-        provider_used=payload.provider_used,
-        raw_explanation=payload.raw_explanation,
+    db.add(
+        Feedback(
+            response_id=response.id,
+            misconceptions=[f.model_dump() for f in payload.misconceptions],
+            reasoning_gaps=[g.model_dump() for g in payload.reasoning_gaps],
+            domain_scores=payload.domain_scores,
+            suggestions=payload.suggestions,
+            overall_score=payload.overall_score,
+            provider_used=payload.provider_used,
+            raw_explanation=payload.raw_explanation,
+            details={
+                "verdict": payload.verdict,
+                "correctness_score": payload.correctness_score,
+                "reasoning_score": payload.reasoning_score,
+                "strengths": payload.strengths,
+                "missed_concepts": payload.missed_concepts,
+                "reference_answer": payload.reference_answer,
+            },
+        )
     )
-    db.add(fb)
 
     ensure_user_masteries(db, user)
-    mastery_row = (
-        db.query(SkillMastery)
-        .filter_by(user_id=user.id, domain_id=question.domain_id)
-        .one()
-    )
+    mastery_row = db.query(SkillMastery).filter_by(user_id=user.id, domain_id=question.domain_id).one()
     score = payload.domain_scores.get(domain_slug, payload.overall_score)
-    diff = question.difficulty.value if hasattr(question.difficulty, "value") else str(question.difficulty)
     mastery_row.mastery = adaptive.update_mastery(
-        mastery_row.mastery,
-        float(score),
-        diff,
-        k=settings.mastery_k,
+        mastery_row.mastery, float(score), _diff(question), k=settings.mastery_k
     )
     mastery_row.attempts += 1
 
@@ -225,6 +272,7 @@ def get_progress(db: Session, user: User) -> ProgressOut:
     masteries = ensure_user_masteries(db, user)
     domains = {d.id: d for d in db.query(SkillDomain).all()}
     total = db.query(Response).filter_by(user_id=user.id).count()
+    skips = db.query(QuestionSkip).filter_by(user_id=user.id).count()
     domain_rows = []
     for m in masteries:
         d = domains.get(m.domain_id)
@@ -247,5 +295,6 @@ def get_progress(db: Session, user: User) -> ProgressOut:
         display_name=user.display_name,
         domains=domain_rows,
         total_responses=total,
+        total_skips=skips,
         average_mastery=round(avg, 4),
     )

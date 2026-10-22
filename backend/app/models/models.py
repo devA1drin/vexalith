@@ -5,7 +5,10 @@ Domain model overview
 ---------------------
 User ──< SkillMastery >── SkillDomain
 User ──< Response >── Question ── SkillDomain
-Response ── Feedback (1:1)
+User ──< QuestionSkip >── Question
+User ──< UserFeedback            (app feedback submitted by signed-in users)
+Response ── Feedback (1:1)       (AI feedback on an answer)
+AppMeta                          (schema version for safe re-seeding)
 """
 
 from __future__ import annotations
@@ -42,7 +45,7 @@ class Difficulty(str, enum.Enum):
 
 
 class SkillDomain(Base):
-    """A critical-thinking skill area that mastery is tracked against."""
+    """A programming-reasoning skill area that mastery is tracked against."""
 
     __tablename__ = "skill_domains"
 
@@ -56,20 +59,28 @@ class SkillDomain(Base):
 
 
 class User(Base):
-    """Learner identity. MVP uses a simple display name (no auth)."""
+    """Learner identity, linked to an OAuth account (GitHub / Google) via Auth.js."""
 
     __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("auth_provider", "provider_account_id", name="uq_user_provider_account"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    display_name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    auth_provider: Mapped[str] = mapped_column(String(32))
+    provider_account_id: Mapped[str] = mapped_column(String(255))
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(128))
+    avatar_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     responses: Mapped[list[Response]] = relationship(back_populates="user")
     masteries: Mapped[list[SkillMastery]] = relationship(back_populates="user")
 
 
 class Question(Base):
-    """A scenario + open-ended prompt targeting one skill domain."""
+    """A code snippet + open-ended prompt targeting one skill domain and language."""
 
     __tablename__ = "questions"
 
@@ -79,11 +90,12 @@ class Question(Base):
         Enum(Difficulty, name="difficulty_enum"),
         default=Difficulty.intermediate,
     )
+    language: Mapped[str] = mapped_column(String(32), default="python", index=True)
     title: Mapped[str] = mapped_column(String(256))
-    scenario: Mapped[str] = mapped_column(Text)
+    code: Mapped[str] = mapped_column(Text, default="")
     prompt: Mapped[str] = mapped_column(Text)
-    # Optional teacher-facing hints used by offline evaluators.
-    expected_signals: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Grading rubric: {concepts: [...], misconceptions: [...], reference_answer: str}
+    rubric: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     source: Mapped[str] = mapped_column(String(32), default="seed")  # seed | llm
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
@@ -119,13 +131,15 @@ class Feedback(Base):
         ForeignKey("responses.id"), unique=True, index=True
     )
     # Structured JSON payloads (see schemas.FeedbackPayload).
-    fallacies: Mapped[list] = mapped_column(JSON, default=list)
+    misconceptions: Mapped[list] = mapped_column(JSON, default=list)
     reasoning_gaps: Mapped[list] = mapped_column(JSON, default=list)
     domain_scores: Mapped[dict] = mapped_column(JSON, default=dict)
     suggestions: Mapped[list] = mapped_column(JSON, default=list)
     overall_score: Mapped[float] = mapped_column(Float, default=0.0)
     provider_used: Mapped[str] = mapped_column(String(32), default="heuristic")
     raw_explanation: Mapped[str] = mapped_column(Text, default="")
+    # Programming-specific details: verdict, correctness/reasoning scores, strengths, ...
+    details: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     response: Mapped[Response] = relationship(back_populates="feedback")
@@ -150,3 +164,41 @@ class SkillMastery(Base):
 
     user: Mapped[User] = relationship(back_populates="masteries")
     domain: Mapped[SkillDomain] = relationship(back_populates="masteries")
+
+
+class QuestionSkip(Base):
+    """A learner skipped a question (counts as 'seen' for selection, tiny mastery nudge)."""
+
+    __tablename__ = "question_skips"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class UserFeedback(Base):
+    """Product feedback submitted by a signed-in user."""
+
+    __tablename__ = "user_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    rating: Mapped[int] = mapped_column(Integer)
+    category: Mapped[str] = mapped_column(String(32))
+    message: Mapped[str] = mapped_column(Text)
+    page_context: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, index=True
+    )
+
+    user: Mapped[User] = relationship()
+
+
+class AppMeta(Base):
+    """Key/value metadata (e.g. schema_version)."""
+
+    __tablename__ = "app_meta"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(String(255))

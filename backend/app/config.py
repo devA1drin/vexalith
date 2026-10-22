@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     LLM defaults target xAI's OpenAI-compatible Chat Completions API
     (https://docs.x.ai). Set XAI_API_KEY (preferred) or LLM_API_KEY.
-    Without a key the app uses the offline HF / heuristic providers.
+    Without a key the app uses the offline rubric-based heuristic grader.
     """
 
     model_config = SettingsConfigDict(
@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     )
 
     # App
-    app_name: str = "Adaptive Learning for Critical Thinking"
+    app_name: str = "Vexalith API"
     debug: bool = False
     cors_origins: str = "http://localhost:3000,http://frontend:3000"
     # Optional regex for extra allowed origins (e.g. Vercel preview URLs).
@@ -59,9 +59,12 @@ class Settings(BaseSettings):
     xai_api_key: str = ""  # preferred env name for xAI
     llm_model: str = "grok-4.7"  # flagship; see https://docs.x.ai/docs/models
 
-    # Hugging Face zero-shot model (lazy-loaded only when needed).
-    hf_model_name: str = "facebook/bart-large-mnli"
-    hf_enabled: bool = True  # set False to skip torch/transformers entirely
+    # Shared secret for HS256 JWTs minted by the Next.js server (Auth.js session).
+    backend_jwt_secret: str = ""
+
+    # Product feedback spam protection
+    feedback_max_per_hour: int = 5
+    feedback_max_per_day: int = 20
 
     # Adaptive engine
     initial_mastery: float = 0.5

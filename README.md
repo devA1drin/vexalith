@@ -1,164 +1,122 @@
-# Adaptive Learning for Critical Thinking
+<p align="center">
+  <img src="frontend/public/logo.svg" width="72" height="72" alt="Vexalith logo" />
+</p>
 
-Portfolio-quality MVP: an AI tutor that presents open-ended critical-thinking scenarios, analyzes free-text answers for **logical fallacies** and **reasoning gaps**, returns **explainable feedback**, and **adapts** the next item’s domain/difficulty from per-skill mastery.
+<h1 align="center">Vexalith</h1>
+<p align="center"><strong>Build Logic. Break Limits.</strong></p>
+<p align="center">
+  Reasoning drills for programmers. Read real Python or JavaScript, then predict the output, find the bug, defend the Big-O, or review the design.<br/>
+  Each answer gets two grades: <em>is it correct</em> and <em>is the reasoning sound</em>.
+</p>
+<p align="center">
+  <a href="https://vexalith-app.vercel.app"><strong>Live demo → vexalith-app.vercel.app</strong></a>
+</p>
 
-Built for students / freelancers in AI · automation · ML who want a clean, runnable monorepo to show end-to-end product thinking.
+![Vexalith home](docs/screenshots/home-desktop.png)
+
+## What it does
+
+| | |
+|---|---|
+| **6 skills** | Code tracing · Debugging · Algorithmic thinking & complexity · Edge cases & testing · Code review & design · Data structures |
+| **72 questions** | 3 levels (beginner → advanced) × 2 languages (Python, JavaScript), syntax-highlighted |
+| **Explainable grading** | Correctness (70%) + reasoning (30%) − misconception penalties. Shows what held up, what you missed, any misconceptions and a model answer |
+| **Adaptive** | An Elo-style mastery rating per skill picks the next skill and difficulty. Recently seen questions are excluded. Skipping is recorded but only nudges mastery (−0.01) |
+| **Accounts** | Sign in with GitHub or Google (Auth.js v5). Practice, progress and history are tied to your account |
+| **Feedback wall** | Signed-in users send rated feedback. A public wall shows recent entries (never emails). Rate limits, duplicate checks and spam checks run on the server |
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/practice-desktop.png" alt="Practice" /></td>
+    <td><img src="docs/screenshots/practice-feedback-desktop.png" alt="Explainable feedback" /></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/progress-desktop.png" alt="Progress dashboard" /></td>
+    <td><img src="docs/screenshots/feedback-desktop.png" alt="Feedback page" /></td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/screenshots/practice-mobile.png" width="260" alt="Practice on mobile" />
+  &nbsp;
+  <img src="docs/screenshots/login-mobile.png" width="260" alt="Sign in on mobile" />
+</p>
 
 ## Architecture
 
-```mermaid
-flowchart TB
-  subgraph Frontend["Next.js (App Router + TS + Tailwind)"]
-    Home[Home / profile]
-    Practice[Practice UI]
-    Progress[Progress + Recharts]
-  end
-
-  subgraph Backend["FastAPI"]
-    API["/api/users · /questions/next · /responses · /progress"]
-    Adaptive[Adaptive engine\nElo-style mastery]
-    Seed[Seeded question bank]
-  end
-
-  subgraph AI["Pluggable AI providers"]
-    LLM["LLMProvider\nxAI Grok (OpenAI-compatible)"]
-    HF["HFProvider\nbart-large-mnli zero-shot"]
-    Heur["HeuristicProvider\nkeyword / structure fallback"]
-  end
-
-  DB[(PostgreSQL or SQLite)]
-
-  Practice --> API
-  Progress --> API
-  Home --> API
-  API --> Adaptive
-  Adaptive --> Seed
-  Adaptive --> DB
-  API --> LLM
-  API --> HF
-  API --> Heur
-  LLM -.->|fallback| Heur
-  HF -.->|fallback| Heur
-  API --> DB
+```
+Browser ──► Next.js 15 (Vercel)                         FastAPI (Vercel Python)
+            ├─ Auth.js v5 (GitHub / Google, JWT session)
+            ├─ /api/backend/* allow-listed proxy ──────► verifies HS256 JWT (iss/aud/exp ≤ 15 min)
+            │    mints 5-minute HS256 JWT per request    ├─ users upserted by (provider, account id)
+            └─ middleware: protects /practice, /progress ├─ adaptive engine (Elo mastery)
+                                                         ├─ grader: LLM (JSON) → rubric fallback
+                                                         └─ SQLAlchemy ──► Neon Postgres
 ```
 
-**Provider resolution:** if `XAI_API_KEY` or `LLM_API_KEY` is set → **Grok**; else if `transformers`+`torch` importable → **HF**; else → **heuristic**. HF model loads lazily; if download fails, the app degrades to heuristic without crashing.
+* The browser never talks to the API directly and never sends a user id. The Next.js server takes the user's identity from the Auth.js session and signs a short-lived token. The API reads the user from that token only.
+* **Grading.** If an OpenAI-compatible model is configured (xAI Grok by default), it returns structured JSON feedback. If the model is missing or fails, a deterministic rubric grader takes over: keyword concepts, misconception rules and a reasoning-quality score. After an auth or quota failure a circuit breaker skips the model for 5 minutes so requests stay fast.
+* **Schema versioning.** On startup the API compares a stored schema version. If it changed, the API migrates and reseeds under a Postgres advisory lock.
 
 ## Stack
 
-| Layer | Tech |
-|-------|------|
-| Backend | Python 3.12+, FastAPI, SQLAlchemy, Pydantic v2 |
-| DB | PostgreSQL (docker-compose) or SQLite (`DATABASE_URL`) |
-| AI | xAI Grok via OpenAI-compatible Chat Completions; optional Hugging Face Transformers |
-| Frontend | Next.js 15 App Router, TypeScript, Tailwind, Recharts |
-| Tests | pytest (adaptive engine + heuristic) |
+**Frontend:** Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS · Auth.js (next-auth v5) · jose · prism-react-renderer · Space Grotesk + JetBrains Mono. Animations are CSS-only and respect `prefers-reduced-motion`.<br/>
+**Backend:** FastAPI · SQLAlchemy 2 · Pydantic v2 · PyJWT · httpx · pytest<br/>
+**Infra:** Vercel (two projects) · Neon Postgres
 
-## xAI Grok configuration
-
-Defaults target xAI’s API ([docs.x.ai](https://docs.x.ai)):
-
-| Variable | Default | Notes |
-|----------|---------|-------|
-| `LLM_BASE_URL` | `https://api.x.ai/v1` | OpenAI-compatible base |
-| `XAI_API_KEY` | _(empty)_ | Preferred key name ([console.x.ai](https://console.x.ai)) |
-| `LLM_API_KEY` | _(empty)_ | Also accepted if `XAI_API_KEY` unset |
-| `LLM_MODEL` | `grok-4.7` | Flagship model; see [models](https://docs.x.ai/docs/models) |
-
-Feedback (and optional generation) uses Chat Completions with `response_format: {"type":"json_object"}`. xAI also supports stricter `json_schema` structured outputs — see [Structured Outputs](https://docs.x.ai/developers/model-capabilities/text/structured-outputs).
-
-Set `LLM_GENERATE_QUESTIONS=1` to have `GET /api/questions/next` ask Grok for a fresh item (off by default so practice stays fast on the seeded bank).
-
-## Quick start (local, SQLite + heuristic/Grok)
+## Run locally
 
 ```bash
-# Backend
-cd backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-# Optional live Grok (never commit the key):
-export XAI_API_KEY=...          # from your environment
-# export LLM_MODEL=grok-4.7     # default
-uvicorn app.main:app --reload --port 8000
+# 1) Secrets (one-time)
+export BACKEND_JWT_SECRET=$(openssl rand -base64 48)
+export AUTH_SECRET=$(openssl rand -base64 48)
 
-# Frontend (other terminal)
+# 2) API on :8000 (SQLite by default)
+cd backend
+python -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+uvicorn app.main:app --reload
+pytest -q                       # 30 tests
+
+# 3) Web on :3000 (in another shell, same exports)
 cd frontend
 npm install
-NEXT_PUBLIC_API_URL=http://localhost:8000 npm run dev
+BACKEND_URL=http://localhost:8000 AUTH_URL=http://localhost:3000 npm run dev
 ```
 
-Open http://localhost:3000 — create a learner, practice, view progress.
+Or run everything with Postgres: `docker compose up --build` (it requires `AUTH_SECRET` and `BACKEND_JWT_SECRET` in your environment).
 
-### API smoke test
+To enable sign-in, create OAuth apps and set `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` and/or `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET`. Each provider is enabled only when both of its values are set. With neither set, `/login` says that sign-in isn't configured yet.
 
-```bash
-curl -s http://localhost:8000/api/health | jq
-curl -s -X POST http://localhost:8000/api/users \
-  -H 'Content-Type: application/json' \
-  -d '{"display_name":"demo"}' | jq
-# use returned id:
-curl -s 'http://localhost:8000/api/questions/next?user_id=1' | jq
-curl -s -X POST http://localhost:8000/api/responses \
-  -H 'Content-Type: application/json' \
-  -d '{"user_id":1,"question_id":1,"answer_text":"The claim is weak because the evidence is only correlational; a key assumption is that no confounders exist."}' | jq
-curl -s http://localhost:8000/api/progress/1 | jq
-```
+| Provider | Homepage URL | Callback URL |
+|---|---|---|
+| GitHub | `https://<your-domain>` | `https://<your-domain>/api/auth/callback/github` |
+| Google | `https://<your-domain>` | `https://<your-domain>/api/auth/callback/google` |
 
-### Tests
+All variables are listed in [`.env.example`](.env.example).
 
-```bash
-cd backend && source .venv/bin/activate
-pytest -q
-```
+## API (selected)
 
-## Docker Compose
+| Method | Path | Auth |
+|---|---|---|
+| GET | `/api/health` | public |
+| GET | `/api/me` | JWT |
+| GET | `/api/questions/next?language=python&exclude=1,2` | JWT |
+| POST | `/api/questions/{id}/skip?language=python` | JWT |
+| POST | `/api/responses` `{question_id, answer_text}` | JWT |
+| GET | `/api/progress` | JWT |
+| POST / GET | `/api/feedback` · `/api/feedback/mine` | JWT |
+| GET | `/api/feedback/recent` | public (no emails) |
 
-```bash
-cp .env.example .env   # add XAI_API_KEY if desired — do not commit .env
-docker compose up --build
-```
+`scripts/smoke_api.sh` mints a test token from `BACKEND_JWT_SECRET` and runs the whole flow.
 
-- Frontend: http://localhost:3000  
-- API docs: http://localhost:8000/docs  
-- Postgres: `localhost:5432` (`ct` / `ct` / `critical_thinking`)
+## Deploy (Vercel)
 
-## Project layout
+Create two projects: root `backend/` (Python) and root `frontend/` (Next.js). Then set:
 
-```
-critical-thinking-app/
-├── backend/
-│   ├── app/
-│   │   ├── ai/           # provider interface, llm (Grok), hf, heuristic
-│   │   ├── api/          # FastAPI routers
-│   │   ├── models/       # SQLAlchemy: User, SkillDomain, Question, …
-│   │   ├── services/     # adaptive engine, question bank, learning flow
-│   │   └── main.py
-│   ├── tests/
-│   └── requirements.txt
-├── frontend/             # Next.js App Router
-├── docker-compose.yml
-├── .env.example
-└── README.md
-```
-
-## Skill domains (MVP)
-
-1. Argument analysis  
-2. Fallacy detection  
-3. Evidence evaluation  
-4. Assumptions  
-5. Causal reasoning  
-
-## Roadmap (not in MVP)
-
-- [ ] Resource recommendations keyed to detected gaps  
-- [ ] Richer progress dashboards (streaks, radar charts, export)  
-- [ ] Argument scaffolding / guided outlines before free writing  
-- [ ] Educator module (classes, assignments, anonymized analytics)  
-- [ ] Auth (OAuth / magic link) and multi-device sync  
-- [ ] Stricter xAI `json_schema` response formats + eval harness  
-- [ ] Spaced repetition over weak fallacies  
+* **Backend:** `DATABASE_URL` (Neon), `BACKEND_JWT_SECRET` (sensitive), `CORS_ORIGINS`, optional `XAI_API_KEY` (sensitive)
+* **Frontend:** `AUTH_SECRET` (sensitive), `BACKEND_JWT_SECRET` (sensitive, same value), `BACKEND_URL`, `AUTH_URL`, `NEXT_PUBLIC_SITE_URL`, and the OAuth IDs and secrets
 
 ## License
 
-MIT — use freely in portfolios and client demos.
+[MIT](LICENSE)
