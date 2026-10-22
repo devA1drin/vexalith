@@ -109,11 +109,22 @@ class LanguageProgress(BaseModel):
     average_score: float
 
 
+class FundamentalsStatus(BaseModel):
+    answers: int
+    strong_answers: int
+    recent_average: float
+    cleared: bool
+    experienced: bool
+    min_answers: int
+    pass_average: float
+
+
 class ProgressOut(BaseModel):
     user_id: int
     display_name: str
     domains: list[DomainProgress]
     languages: list[LanguageProgress] = []
+    fundamentals: FundamentalsStatus | None = None
     total_responses: int
     total_skips: int = 0
     average_mastery: float
