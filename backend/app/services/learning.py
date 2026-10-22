@@ -288,7 +288,12 @@ def get_next_question(
         return picked["obj"] if picked else None
 
     in_domain = [q for q in all_in_lang if q.domain_id == domain.id]
-    q = choose(in_domain) or (None if forced_level else choose(all_in_lang))
+    q = None
+    if forced_level and language != GENERAL and rng.random() < 0.75:
+        # Onboarding / focus: mostly show the chosen language, with occasional
+        # language-agnostic basics (algorithms, binary, booleans) mixed in.
+        q = choose([x for x in in_domain if x.language == language])
+    q = q or choose(in_domain) or (None if forced_level else choose(all_in_lang))
     if q is None and forced_level:
         # Every fundamentals question is "recent": reuse the least recent one.
         pool = [x for x in in_domain if x.id not in (exclude_ids or set())] or in_domain
