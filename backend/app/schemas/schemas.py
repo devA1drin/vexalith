@@ -148,6 +148,34 @@ class ProgressOut(BaseModel):
     average_mastery: float
 
 
+# ── Recommendations ──────────────────────────────────────────────────────────
+
+
+class TopicTip(BaseModel):
+    domain_slug: str
+    domain_name: str
+    mastery: float
+    attempts: int
+    suggested_difficulty: str
+    reason: str
+
+
+class LanguageTip(BaseModel):
+    language: str
+    name: str
+    attempts: int
+    average_score: float
+    reason: str
+
+
+class RecommendationsOut(BaseModel):
+    language: str
+    headline: str
+    topics: list[TopicTip] = []
+    languages: list[LanguageTip] = []
+    next_questions: list[QuestionOut] = []
+
+
 # ── Product feedback ─────────────────────────────────────────────────────────
 
 FeedbackCategory = Literal["bug", "feature_request", "question_content", "other"]

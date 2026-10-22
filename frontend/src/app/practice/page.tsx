@@ -1,13 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, ApiError, LANGUAGE_IDS, type FeedbackPayload, type Focus, type Language, type Question } from "@/lib/api";
+import { api, ApiError, DIFFICULTY_IDS, LANGUAGE_IDS, type Difficulty, type FeedbackPayload, type Focus, type Language, type PracticeOptions, type Question } from "@/lib/api";
 import { CodeBlock } from "@/components/CodeBlock";
 import { FeedbackCard } from "@/components/FeedbackCard";
 import { HintPanel } from "@/components/HintPanel";
 
 const LANG_KEY = "vexalith_language";
 const FOCUS_KEY = "vexalith_focus";
+const LEVEL_KEY = "vexalith_level";
+const LEVELS: { id: Difficulty; label: string; hint: string }[] = [
+  { id: "adaptive", label: "Adaptive", hint: "Vexalith picks the level from your results (recommended)" },
+  { id: "beginner", label: "Beginner", hint: "Only level-1 questions" },
+  { id: "intermediate", label: "Intermediate", hint: "Only level-2 questions" },
+  { id: "advanced", label: "Advanced", hint: "Only level-3 questions" },
+];
+const TOPIC_NAMES: Record<string, string> = {
+  fundamentals: "Fundamentals", code_tracing: "Code Tracing", debugging: "Debugging",
+  algorithmic_thinking: "Algorithmic Thinking", edge_cases_testing: "Edge Cases & Testing",
+  code_review_design: "Code Review & Design", data_structures: "Data Structures", algorithms: "Algorithms",
+  logic_problems: "Logic Problems",
+};
 const LANGS: { id: Language; label: string }[] = [
   { id: "python", label: "Python" },
   { id: "javascript", label: "JavaScript" },
@@ -30,6 +43,10 @@ export default function PracticePage() {
   const [count, setCount] = useState(0);
   const [focus, setFocus] = useState<Focus | null>(null);
   const focusRef = useRef<Focus | null>(null);
+  const [difficulty, setDifficulty] = useState<Difficulty>("adaptive");
+  const [topic, setTopic] = useState<string | null>(null);
+  const optsRef = useRef<{ difficulty: Difficulty; topic: string | null }>({ difficulty: "adaptive", topic: null });
+  const opts = (): PracticeOptions => ({ focus: focusRef.current, ...optsRef.current });
   const recent = useRef<number[]>([]);
   const initialized = useRef(false);
 
@@ -57,7 +74,7 @@ export default function PracticePage() {
       setError(null);
       setLeaving(true);
       try {
-        show(await api.nextQuestion(lang, recent.current, focusRef.current));
+        show(await api.nextQuestion(lang, recent.current, opts()));
       } catch (e) {
         handleError(e, "Failed to load question");
       } finally {
@@ -70,14 +87,33 @@ export default function PracticePage() {
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-    const saved = localStorage.getItem(LANG_KEY);
+    // Links from recommendations / the daily challenge: ?language=&level=&topic=&question=
+    const params = new URLSearchParams(window.location.search);
+    const urlLang = params.get("language");
+    const saved = LANGUAGE_IDS.includes(urlLang as Language) ? urlLang : localStorage.getItem(LANG_KEY);
     const lang: Language = LANGUAGE_IDS.includes(saved as Language) ? (saved as Language) : "python";
     setLanguage(lang);
+    if (urlLang === lang) localStorage.setItem(LANG_KEY, lang);
     const f: Focus | null = localStorage.getItem(FOCUS_KEY) === "fundamentals" ? "fundamentals" : null;
     focusRef.current = f;
     setFocus(f);
-    loadNext(lang);
-  }, [loadNext]);
+    const urlLevel = params.get("level");
+    if (DIFFICULTY_IDS.includes(urlLevel as Difficulty)) localStorage.setItem(LEVEL_KEY, urlLevel as string);
+    const savedLevel = localStorage.getItem(LEVEL_KEY) as Difficulty | null;
+    const lvl: Difficulty = savedLevel && DIFFICULTY_IDS.includes(savedLevel) ? savedLevel : "adaptive";
+    const tp = params.get("topic");
+    const t = tp && tp in TOPIC_NAMES ? tp : null;
+    optsRef.current = { difficulty: lvl, topic: t };
+    setDifficulty(lvl);
+    setTopic(t);
+    const qid = Number(params.get("question"));
+    if (Number.isInteger(qid) && qid > 0) {
+      setBusy("load");
+      api.question(qid).then(show).catch(() => loadNext(lang)).finally(() => setBusy(null));
+    } else {
+      loadNext(lang);
+    }
+  }, [loadNext, show]);
 
   async function onSkip() {
     if (!question) return;
@@ -85,7 +121,7 @@ export default function PracticePage() {
     setError(null);
     setLeaving(true);
     try {
-      const res = await api.skip(question.id, language, focusRef.current);
+      const res = await api.skip(question.id, language, opts());
       show(res.next_question);
     } catch (e) {
       handleError(e, "Skip failed");
@@ -113,6 +149,21 @@ export default function PracticePage() {
     setLanguage(lang);
     localStorage.setItem(LANG_KEY, lang);
     loadNext(lang);
+  }
+
+  function onDifficulty(d: Difficulty) {
+    if (d === difficulty) return;
+    setDifficulty(d);
+    optsRef.current = { ...optsRef.current, difficulty: d };
+    localStorage.setItem(LEVEL_KEY, d);
+    if (!feedback) loadNext(language);
+  }
+
+  function clearTopic() {
+    setTopic(null);
+    optsRef.current = { ...optsRef.current, topic: null };
+    window.history.replaceState(null, "", "/practice");
+    if (!feedback) loadNext(language);
   }
 
   function onFocusToggle() {
@@ -180,6 +231,43 @@ export default function PracticePage() {
             </button>
           )}
         </div>
+      </div>
+
+      <div className="-mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="label">Level</span>
+        <div className="grid grid-cols-2 gap-px border border-ink-700 bg-ink-700 sm:grid-cols-4" role="radiogroup" aria-label="Difficulty level" data-testid="level-picker">
+          {LEVELS.map((l, i) => (
+            <button
+              key={l.id}
+              type="button"
+              role="radio"
+              aria-checked={difficulty === l.id}
+              onClick={() => onDifficulty(l.id)}
+              disabled={busy !== null}
+              title={l.hint}
+              data-level={l.id}
+              className={`flex items-center gap-2 px-3 py-1.5 font-mono text-[12px] uppercase tracking-wider transition-colors ${
+                difficulty === l.id ? "bg-ink-100 text-ink-950" : "bg-ink-950 text-ink-300 hover:text-ink-50"
+              }`}
+            >
+              {i === 0 ? (
+                <span aria-hidden="true" className="text-[11px]">◐</span>
+              ) : (
+                <span aria-hidden="true" className="flex gap-0.5">
+                  {[1, 2, 3].map((n) => <span key={n} className={`inline-block h-1.5 w-1.5 ${n <= i ? (difficulty === l.id ? "bg-ink-950" : "bg-accent") : difficulty === l.id ? "bg-ink-400" : "bg-ink-700"}`} />)}
+                </span>
+              )}
+              {l.label}
+            </button>
+          ))}
+        </div>
+        {difficulty === "adaptive" && <span className="font-mono text-[11px] text-ink-500">level follows your results</span>}
+        {topic && (
+          <span className="chip gap-2 border-accent text-accent" data-testid="topic-chip">
+            Topic: {TOPIC_NAMES[topic] ?? topic}
+            <button type="button" onClick={clearTopic} aria-label="Clear topic" className="text-ink-300 hover:text-ink-50">×</button>
+          </span>
+        )}
       </div>
 
       {error && <p role="alert" className="border-l-2 border-signal pl-3 text-sm text-signal-soft">{error}</p>}

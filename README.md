@@ -49,7 +49,11 @@ There are 421 questions in total, including 69 for C++, 35 fill-in-the-missing-c
 ## How it works
 
 1. **Sign in** with GitHub or Google.
-2. **Pick a language.** If you are new, you start with Fundamentals at level 1.
+2. **Pick a language and a level.** If you are new, you start with Fundamentals at level 1.
+   The **Level** switch under the languages has four choices:
+   - **Adaptive** (the default): the app picks the level from your results.
+   - **Beginner**, **Intermediate** or **Advanced**: you only get questions at that level.
+   Your choice is remembered in your browser. Skip and Next keep your language and level.
 3. **Answer in your own words.** Say what the code does and why.
    Stuck? Press **Show hint**. Every question has 3 hints, shown one at a time: first a way to approach it, then the key idea, then the point your answer must make. Each hint takes 10% off that answer's score (30% at most).
 4. **Read your feedback.** Right or wrong, you get an explanation: the key concept, a checklist of everything a full answer covers (ticked where you got it), any common mistake you made and why it's wrong, and the model answer. For fill-in-the-missing-code questions you also see the correct code.
@@ -57,6 +61,11 @@ There are 421 questions in total, including 69 for C++, 35 fill-in-the-missing-c
 The app adapts to you. It gives you more questions on the skills you find hardest, and harder questions as you improve.
 Once you have cleared Fundamentals, every topic opens up.
 Turn on **Focus: Fundamentals** on the practice page if you only want the basics.
+
+**Recommended for you.** Your progress page (and the home page, once you are signed in) suggests what to do next:
+- your 3 weakest skills, each with a **Practise** button that opens questions on just that topic;
+- a few questions you haven't seen yet, at a level that suits you;
+- any language where your average score is below your overall average.
 
 ## Run it on your computer
 

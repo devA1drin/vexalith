@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api, ApiError, type FundamentalsStatus, type LanguageProgress, type ProgressOut } from "@/lib/api";
 import { MasteryChart } from "@/components/MasteryChart";
 import { CountUp } from "@/components/CountUp";
+import { Recommendations } from "@/components/Recommendations";
 
 export default function ProgressPage() {
   const [data, setData] = useState<ProgressOut | null>(null);
@@ -42,6 +43,7 @@ export default function ProgressPage() {
             </div>
           </div>
           {data.fundamentals && <FundamentalsPanel s={data.fundamentals} />}
+          <Recommendations />
           <MasteryChart domains={data.domains} />
           <div className="card overflow-x-auto">
             <table className="w-full text-left text-sm">
