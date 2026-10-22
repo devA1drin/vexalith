@@ -315,7 +315,10 @@ export default function PracticePage() {
               <p className="border-l-2 border-accent pl-4 text-[17px] font-medium leading-relaxed text-ink-50">{question.prompt}</p>
               <HintPanel questionId={question.id} hintCount={question.hint_count ?? 0} locked={!!feedback} />
               <label className="flex flex-1 flex-col gap-2">
-                <span className="label">{isBlank ? "The missing code (+ why, optional)" : "Your explanation"}</span>
+                <span className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="label">{isBlank ? "The missing code (+ why, optional)" : "Your explanation"}</span>
+                  <span className="font-mono text-[11px] text-ink-500" data-testid="language-hint" lang="fil">English · Filipino · Taglish</span>
+                </span>
                 <textarea
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
@@ -323,8 +326,8 @@ export default function PracticePage() {
                   disabled={!!feedback || busy === "submit"}
                   placeholder={
                     isBlank
-                      ? "Type the code that replaces the highlighted ? slot.\nThen, if you like, say why it fits."
-                      : "Answer first, then justify it.\ne.g. \"Line 5 prints … because …\""
+                      ? "Type the code that replaces the highlighted ? slot.\nThen, if you like, say why it fits (English, Filipino or Taglish)."
+                      : "Answer first, then justify it.\ne.g. \"Line 5 prints … because …\"\nPuwede ring sumagot sa Filipino o Taglish."
                   }
                   className="input min-h-[11rem] flex-1 font-mono text-[13px] leading-6"
                 />
