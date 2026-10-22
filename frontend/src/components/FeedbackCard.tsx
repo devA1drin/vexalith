@@ -55,6 +55,8 @@ export function FeedbackCard({ feedback }: { feedback: FeedbackPayload }) {
         <Meter label="Reasoning" value={feedback.reasoning_score} delay={300} />
       </div>
 
+      <Explanation feedback={feedback} />
+
       {feedback.raw_explanation && <p className="rise text-[15px] leading-relaxed text-ink-200" style={{ ["--rd" as string]: "400ms" }}>{feedback.raw_explanation}</p>}
 
       {feedback.strengths.length > 0 && (
@@ -92,7 +94,7 @@ export function FeedbackCard({ feedback }: { feedback: FeedbackPayload }) {
         <Block title="Next steps" tone="border-ink-500 text-ink-300" delay={next()}><List items={feedback.suggestions} /></Block>
       )}
       {feedback.reference_answer && (
-        <details className="group border border-ink-700 p-4">
+        <details className="group border border-ink-700 p-4" open={feedback.verdict !== "correct"} data-testid="model-answer">
           <summary className="cursor-pointer font-mono text-[12px] uppercase tracking-wider text-accent">Model answer</summary>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-ink-100">{feedback.reference_answer}</p>
         </details>
@@ -106,5 +108,67 @@ function List({ items }: { items: string[] }) {
     <ul className="space-y-1 text-sm text-ink-100">
       {items.map((s, i) => <li key={i} className="flex gap-2"><span className="text-ink-500">–</span><span>{s}</span></li>)}
     </ul>
+  );
+}
+
+/**
+ * Why the answer is right or wrong, for both question kinds: the verdict in
+ * plain words, the key concept, the correct code for fill-in questions, and
+ * every point a full answer covers (ticked when the grader saw it).
+ */
+function Explanation({ feedback }: { feedback: FeedbackPayload }) {
+  const points = feedback.key_points ?? [];
+  const accepted = feedback.accepted_answers ?? [];
+  const covered = (label: string) => feedback.strengths.some((s) => s.toLowerCase().includes(label.toLowerCase()));
+  const correct = feedback.verdict === "correct";
+  const headline = correct
+    ? "Why this is right"
+    : feedback.verdict === "partially_correct"
+      ? "Partly there. Here is what a full answer needs"
+      : "Why this isn't right yet";
+  if (!points.length && !accepted.length && !feedback.hints_used) return null;
+  return (
+    <div className="rise grid gap-5 border border-ink-700 bg-ink-950 p-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" style={{ ["--rd" as string]: "350ms" }} data-testid="explanation">
+      <div className="space-y-3">
+        <h3 className={`label !text-current ${correct ? "text-accent" : "text-ink-100"}`}>{headline}</h3>
+        {points[0] && (
+          <p className="text-[15px] leading-relaxed text-ink-50">
+            <span className="mr-2 font-mono text-[11px] uppercase tracking-wider text-ink-400">Key concept</span>
+            {points[0]}
+          </p>
+        )}
+        {accepted.length > 0 && (
+          <div>
+            <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-ink-400">{correct ? "Also accepted" : "Correct code for the blank"}</p>
+            <div className="flex flex-wrap gap-2">
+              {accepted.slice(0, 4).map((a) => (
+                <code key={a} className="border border-accent/60 bg-accent/10 px-2 py-0.5 font-mono text-[13px] text-accent">{a}</code>
+              ))}
+            </div>
+          </div>
+        )}
+        {!!feedback.hints_used && (
+          <p className="font-mono text-[12px] text-ink-400">
+            {feedback.hints_used} hint{feedback.hints_used > 1 ? "s" : ""} used · score −{Math.round((feedback.hint_penalty ?? 0) * 100)}%
+          </p>
+        )}
+      </div>
+      {points.length > 1 && (
+        <div>
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-wider text-ink-400">A full answer covers</p>
+          <ul className="space-y-1.5 text-sm">
+            {points.map((p) => {
+              const ok = covered(p);
+              return (
+                <li key={p} className="grid grid-cols-[1.25rem_1fr] gap-1.5">
+                  <span aria-hidden="true" className={ok ? "text-accent" : "text-ink-600"}>{ok ? "✓" : "○"}</span>
+                  <span className={ok ? "text-ink-100" : "text-ink-300"}>{p}<span className="sr-only">{ok ? " (covered)" : " (not covered)"}</span></span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
