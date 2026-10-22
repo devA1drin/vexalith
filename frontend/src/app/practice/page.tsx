@@ -137,7 +137,7 @@ export default function PracticePage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div
-            className="grid grid-cols-4 gap-px border border-ink-700 bg-ink-700 sm:grid-cols-7"
+            className="grid grid-cols-3 gap-px border border-ink-700 bg-ink-700 sm:grid-cols-7"
             role="radiogroup"
             aria-label="Language"
           >
@@ -151,7 +151,7 @@ export default function PracticePage() {
                 disabled={busy !== null}
                 data-lang={l.id}
                 title={l.id === "general" ? "Language-agnostic logic and algorithm problems" : l.id === "cpp" ? "Modern C++ (C++17)" : undefined}
-                className={`px-3 py-1.5 ${l.id === "general" ? "max-sm:col-span-2" : ""} font-mono text-[12px] uppercase tracking-wider transition-colors ${
+                className={`px-3 py-1.5 ${l.id === "general" ? "max-sm:col-span-3" : ""} font-mono text-[12px] uppercase tracking-wider transition-colors ${
                   language === l.id ? "bg-accent text-ink-950" : "bg-ink-950 text-ink-300 hover:text-ink-50"
                 }`}
               >
