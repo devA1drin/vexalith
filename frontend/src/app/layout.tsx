@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: { default: `${SITE.name} — ${SITE.tagline}`, template: `%s | ${SITE.name}` },
   description: SITE.description,
   applicationName: SITE.name,
-  keywords: ["programming", "code reasoning", "debugging", "Big-O", "code review", "code tracing", "Python", "JavaScript", "PHP", "HTML", "CSS", "algorithms", "logic puzzles"],
+  keywords: ["programming", "code reasoning", "debugging", "Big-O", "code review", "code tracing", "Python", "JavaScript", "PHP", "C++", "HTML", "CSS", "algorithms", "logic puzzles"],
   openGraph: { type: "website", siteName: SITE.name, title: `${SITE.name} — ${SITE.tagline}`, description: SITE.description, url: SITE.url },
   twitter: { card: "summary_large_image", title: `${SITE.name} — ${SITE.tagline}`, description: SITE.description },
   icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/favicon.ico", sizes: "any" }] },

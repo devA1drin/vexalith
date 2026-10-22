@@ -81,7 +81,7 @@ function Stat({ label, value, suffix = "", i }: { label: string; value: number; 
 }
 
 const LANG_LABEL: Record<string, string> = {
-  python: "Python", javascript: "JavaScript", php: "PHP", html: "HTML", css: "CSS", general: "General",
+  python: "Python", javascript: "JavaScript", php: "PHP", cpp: "C++", html: "HTML", css: "CSS", general: "General",
 };
 
 function LanguageBreakdown({ rows }: { rows: LanguageProgress[] }) {

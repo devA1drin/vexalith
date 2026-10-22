@@ -3,8 +3,8 @@
  * which attaches a short-lived backend JWT derived from the Auth.js session.
  */
 
-export type Language = "python" | "javascript" | "php" | "html" | "css" | "general";
-export const LANGUAGE_IDS: Language[] = ["python", "javascript", "php", "html", "css", "general"];
+export type Language = "python" | "javascript" | "php" | "cpp" | "html" | "css" | "general";
+export const LANGUAGE_IDS: Language[] = ["python", "javascript", "php", "cpp", "html", "css", "general"];
 
 export type Finding = { name: string; explanation: string; evidence_span?: string | null; confidence: number };
 export type ReasoningGap = { description: string; how_to_improve: string };

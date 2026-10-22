@@ -17,6 +17,7 @@ const theme: PrismTheme = {
     { types: ["tag"], style: { color: "#c8f031" } },
     { types: ["attr-name", "selector"], style: { color: "#f2f1ec" } },
     { types: ["delimiter"], style: { color: "#ff9a7a" } },
+    { types: ["macro", "directive", "directive-hash"], style: { color: "#a9b98a" } },
   ],
 };
 
@@ -25,6 +26,7 @@ const LANG_META: Record<string, { prism: string; file: string; label: string }> 
   python: { prism: "python", file: "snippet.py", label: "python" },
   javascript: { prism: "javascript", file: "snippet.js", label: "javascript" },
   php: { prism: "php", file: "snippet.php", label: "php" },
+  cpp: { prism: "cpp", file: "snippet.cpp", label: "c++" },
   html: { prism: "markup", file: "snippet.html", label: "html" },
   css: { prism: "css", file: "snippet.css", label: "css" },
   general: { prism: "plain", file: "problem.txt", label: "general" },

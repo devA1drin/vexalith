@@ -11,6 +11,7 @@ const LANGS: { id: Language; label: string }[] = [
   { id: "python", label: "Python" },
   { id: "javascript", label: "JavaScript" },
   { id: "php", label: "PHP" },
+  { id: "cpp", label: "C++" },
   { id: "html", label: "HTML" },
   { id: "css", label: "CSS" },
   { id: "general", label: "General" },
@@ -134,7 +135,7 @@ export default function PracticePage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div
-            className="grid grid-cols-3 gap-px border border-ink-700 bg-ink-700 sm:grid-cols-6"
+            className="grid grid-cols-4 gap-px border border-ink-700 bg-ink-700 sm:grid-cols-7"
             role="radiogroup"
             aria-label="Language"
           >
@@ -147,8 +148,8 @@ export default function PracticePage() {
                 onClick={() => onLanguage(l.id)}
                 disabled={busy !== null}
                 data-lang={l.id}
-                title={l.id === "general" ? "Language-agnostic logic and algorithm problems" : undefined}
-                className={`px-3 py-1.5 font-mono text-[12px] uppercase tracking-wider transition-colors ${
+                title={l.id === "general" ? "Language-agnostic logic and algorithm problems" : l.id === "cpp" ? "Modern C++ (C++17)" : undefined}
+                className={`px-3 py-1.5 ${l.id === "general" ? "max-sm:col-span-2" : ""} font-mono text-[12px] uppercase tracking-wider transition-colors ${
                   language === l.id ? "bg-accent text-ink-950" : "bg-ink-950 text-ink-300 hover:text-ink-50"
                 }`}
               >
