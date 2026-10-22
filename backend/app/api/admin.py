@@ -1,0 +1,64 @@
+"""Admin maintenance: purge specific users (and everything they own).
+
+Disabled (404) unless ADMIN_TOKEN (>= 32 chars) is configured. Callers must send it in
+the X-Admin-Token header; comparison is constant-time. Users are addressed by their
+stable provider identity ("provider:account_id"), never by name.
+"""
+
+from __future__ import annotations
+
+import hmac
+
+from fastapi import APIRouter, Depends, Header, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy import delete, select
+from sqlalchemy.orm import Session
+
+from app.config import get_settings
+from app.db.session import get_db
+from app.models.models import Feedback, QuestionSkip, Response, SkillMastery, User, UserFeedback
+
+router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
+    expected = get_settings().admin_token
+    if not expected or len(expected) < 32:
+        raise HTTPException(status_code=404, detail="Not Found")
+    if not x_admin_token or not hmac.compare_digest(x_admin_token.encode(), expected.encode()):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+class PurgeRequest(BaseModel):
+    identities: list[str] = Field(min_length=1, max_length=20)
+    dry_run: bool = True
+
+
+@router.post("/purge-users", dependencies=[Depends(require_admin)])
+def purge_users(body: PurgeRequest, db: Session = Depends(get_db)) -> dict:
+    report: list[dict] = []
+    for ident in body.identities:
+        provider, _, pid = ident.partition(":")
+        user = db.scalar(select(User).where(User.auth_provider == provider, User.provider_account_id == pid))
+        if not user:
+            report.append({"identity": ident, "found": False})
+            continue
+        resp_ids = list(db.scalars(select(Response.id).where(Response.user_id == user.id)))
+        counts = {
+            "responses": len(resp_ids),
+            "skips": len(list(db.scalars(select(QuestionSkip.id).where(QuestionSkip.user_id == user.id)))),
+            "masteries": len(list(db.scalars(select(SkillMastery.id).where(SkillMastery.user_id == user.id)))),
+            "feedback_entries": len(list(db.scalars(select(UserFeedback.id).where(UserFeedback.user_id == user.id)))),
+        }
+        if not body.dry_run:
+            if resp_ids:
+                db.execute(delete(Feedback).where(Feedback.response_id.in_(resp_ids)))
+            db.execute(delete(Response).where(Response.user_id == user.id))
+            db.execute(delete(QuestionSkip).where(QuestionSkip.user_id == user.id))
+            db.execute(delete(SkillMastery).where(SkillMastery.user_id == user.id))
+            db.execute(delete(UserFeedback).where(UserFeedback.user_id == user.id))
+            db.execute(delete(User).where(User.id == user.id))
+        report.append({"identity": ident, "found": True, "name": user.display_name, **counts})
+    if not body.dry_run:
+        db.commit()
+    return {"dry_run": body.dry_run, "users": report}

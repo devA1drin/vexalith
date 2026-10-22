@@ -76,7 +76,7 @@ cd backend
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
 uvicorn app.main:app --reload
-pytest -q                       # 30 tests
+pytest -q                       # 32 tests
 
 # 3) Web on :3000 (in another shell, same exports)
 cd frontend
@@ -109,6 +109,8 @@ All variables are listed in [`.env.example`](.env.example).
 | GET | `/api/feedback/recent` | public (no emails) |
 
 `scripts/smoke_api.sh` mints a test token from `BACKEND_JWT_SECRET` and runs the whole flow.
+
+`POST /api/admin/purge-users` deletes specific users (by `provider:account_id`) and everything they own. It returns 404 unless the sensitive `ADMIN_TOKEN` env var (32+ chars) is set, and it needs that token in the `X-Admin-Token` header. Requests default to a dry run.
 
 ## Deploy (Vercel)
 
