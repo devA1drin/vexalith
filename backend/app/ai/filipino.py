@@ -219,7 +219,23 @@ _PREFIXES = (
     "ipa", "naka", "maka", "napa", "mapa", "nag", "mag", "pag", "ika", "ma", "na", "pa", "ka", "i",
 )
 _SUFFIXES = ("han", "hin", "nan", "nin", "an", "in")
-_TOKEN = re.compile(r"[a-zñ]+(?:-[a-zñ]+)*|\S+", re.I)
+_EDGE_PUNCT = ",;:!?\"'“”‘’"
+
+
+def _tokens(text: str) -> list[str]:
+    """Whitespace tokens without sentence punctuation; code such as acc.append(x) stays whole."""
+    out = []
+    for chunk in text.split():
+        core = chunk.strip(_EDGE_PUNCT)
+        if core.endswith(".") and not core.endswith(".."):
+            core = core[:-1]
+        if core.startswith("(") and core.count("(") > core.count(")"):
+            core = core[1:]
+        if core.endswith(")") and core.count(")") > core.count("("):
+            core = core[:-1]
+        if core:
+            out.append(core)
+    return out
 _ALPHA = re.compile(r"^[a-zñ]+(?:-[a-zñ]+)*$", re.I)
 
 
@@ -322,7 +338,7 @@ def detect_language(text: str) -> str:
 def gloss(text: str) -> Gloss:
     """Detect English / Filipino / Taglish and build the English gloss."""
     low = text.lower()
-    tokens = _TOKEN.findall(low)
+    tokens = _tokens(low)
     alpha = [t for t in tokens if _ALPHA.match(t)]
     tl = sum(1 for t in alpha if t in TL_MARKERS or (t not in EN_MARKERS and t not in EN_VERBS and lemma(t) and lemma(t)[0] == "tl"))
     # English share: everyday words plus programming vocabulary ("value", "call", "loop").
@@ -359,7 +375,7 @@ def gloss(text: str) -> Gloss:
 
 
 def _emit_words(chunk: str, emit, primary: list[str], full: list[str], unknown: list[str]) -> None:
-    for tok in _TOKEN.findall(chunk):
+    for tok in _tokens(chunk):
         if not _ALPHA.match(tok):
             # numbers, code, punctuation-attached tokens: keep as written
             primary.append(tok)
