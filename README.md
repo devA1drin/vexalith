@@ -20,6 +20,7 @@ It checks two things: whether your answer is right, and whether your reasoning m
 - Python
 - JavaScript
 - PHP
+- C++ (modern C++17: from your first `cout` to pointers, classes, the STL and smart pointers)
 - HTML
 - CSS
 - General (no code needed: logic puzzles, binary numbers, step-by-step problem solving)
@@ -36,7 +37,7 @@ It checks two things: whether your answer is right, and whether your reasoning m
 - **Algorithms**: classic problems such as searching and sorting.
 - **Logic problems**: true/false puzzles and reasoning.
 
-There are 302 questions in total.
+There are 359 questions in total, including 57 for C++.
 
 ## How it works
 

@@ -21,7 +21,7 @@ def _walk(client, h, lang, n=25):
 
 
 def test_each_language_returns_appropriate_questions(client):
-    for i, lang in enumerate(["python", "javascript", "php", "html", "css"]):
+    for i, lang in enumerate(["python", "javascript", "php", "cpp", "html", "css"]):
         qs = _walk(client, auth(pid=f"lang-{i}"), lang)
         assert {q["language"] for q in qs} <= {lang, "general"}
         assert any(q["language"] == lang for q in qs)
@@ -92,3 +92,25 @@ def test_reseed_adds_content_without_touching_user_data(tmp_path, monkeypatch):
         assert len(after) == len(bank.SEED_QUESTIONS)
         assert db.query(Response).count() == 1 and db.query(User).count() == 1
         assert {"algorithms", "logic_problems"} <= {d.slug for d in db.query(SkillDomain).all()}
+
+
+def test_cpp_questions_never_leak_into_other_languages(client):
+    for lang in ("python", "javascript", "php", "html", "css", "general"):
+        h = auth(pid=f"cpp-leak-{lang}")
+        graduate(client, h, lang)
+        assert all(q["language"] != "cpp" for q in _walk(client, h, lang, n=30)), lang
+
+
+def test_cpp_selection_after_onboarding_rotates_through_skills(client):
+    h = auth(pid="cpp-walk")
+    graduate(client, h, "cpp")
+    qs = _walk(client, h, "cpp", n=40)
+    assert {q["language"] for q in qs} <= {"cpp", "general"}
+    assert sum(q["language"] == "cpp" for q in qs) >= 10
+    assert len({q["domain_slug"] for q in qs}) >= 4
+    assert all(a["id"] != b["id"] for a, b in zip(qs, qs[1:]))
+
+
+def test_cpp_is_listed_in_meta_languages(client):
+    langs = client.get("/api/languages").json()
+    assert {"slug": "cpp", "name": "C++"} in langs

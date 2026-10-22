@@ -1,7 +1,9 @@
 """Aggregated seed bank."""
 
 from app.content.questions_algorithms import QUESTIONS_ALGORITHMS
+from app.content.questions_cpp import QUESTIONS_CPP
 from app.content.questions_css import QUESTIONS_CSS
+from app.content.questions_fund_cpp import QUESTIONS_FUND_CPP
 from app.content.questions_fund_javascript import QUESTIONS_FUND_JAVASCRIPT
 from app.content.questions_fund_php import QUESTIONS_FUND_PHP
 from app.content.questions_fund_python import QUESTIONS_FUND_PYTHON
@@ -16,6 +18,7 @@ FUNDAMENTALS_QUESTIONS = (
     QUESTIONS_FUND_PYTHON
     + QUESTIONS_FUND_JAVASCRIPT
     + QUESTIONS_FUND_PHP
+    + QUESTIONS_FUND_CPP
     + QUESTIONS_FUND_HTML
     + QUESTIONS_FUND_CSS
     + QUESTIONS_FUND_GENERAL
@@ -28,6 +31,7 @@ SEED_QUESTIONS = (
     + QUESTIONS_HTML
     + QUESTIONS_CSS
     + QUESTIONS_PHP
+    + QUESTIONS_CPP
     + QUESTIONS_LOGIC
     + QUESTIONS_ALGORITHMS
 )
