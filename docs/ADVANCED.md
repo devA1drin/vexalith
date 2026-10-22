@@ -22,7 +22,7 @@ Browser ──► Next.js 15 (Vercel)                         FastAPI (Vercel Py
 
 ## Stack
 
-- **Frontend:** Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS · Auth.js (next-auth v5) · jose · prism-react-renderer + prismjs (PHP grammar) · Space Grotesk + JetBrains Mono. Animations are CSS-only and respect `prefers-reduced-motion`.
+- **Frontend:** Next.js 15 (App Router) · React 19 · TypeScript · Tailwind CSS · Auth.js (next-auth v5) · jose · prism-react-renderer + prismjs (PHP grammar; C++ uses the bundled `cpp` grammar) · Space Grotesk + JetBrains Mono. Animations are CSS-only and respect `prefers-reduced-motion`.
 - **Backend:** FastAPI · SQLAlchemy 2 · Pydantic v2 · PyJWT · httpx · pytest.
 - **Infra:** Vercel (two projects) · Neon Postgres.
 
@@ -39,7 +39,7 @@ Browser ──► Next.js 15 (Vercel)                         FastAPI (Vercel Py
 | POST / GET | `/api/feedback` · `/api/feedback/mine` | JWT |
 | GET | `/api/feedback/recent` | public (no emails) |
 
-- `language` is one of `python`, `javascript`, `php`, `html`, `css` or `general`. `focus` is optional and currently accepts only `fundamentals`.
+- `language` is one of `python`, `javascript`, `php`, `cpp` (C++), `html`, `css` or `general`. `focus` is optional and currently accepts only `fundamentals`.
 - `scripts/smoke_api.sh` mints a test token from `BACKEND_JWT_SECRET` and runs the whole flow against a running API.
 - `POST /api/admin/purge-users` deletes specific users (by `provider:account_id`) and everything they own. It returns 404 unless the sensitive `ADMIN_TOKEN` env var (32+ characters) is set, and it needs that token in the `X-Admin-Token` header. Requests default to a dry run. Remove `ADMIN_TOKEN` after use.
 
