@@ -27,6 +27,7 @@ SCHEMA_VERSION = "2-programming-auth"
 
 # Tables from every schema version (dropped on version mismatch).
 _ALL_TABLES = [
+    "hint_usages",
     "user_feedback",
     "question_skips",
     "feedback",

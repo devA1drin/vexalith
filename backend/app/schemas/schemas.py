@@ -36,6 +36,15 @@ class QuestionOut(BaseModel):
     prompt: str
     # "explain" (free-text reasoning) or "fill_blank" (supply the code for the ____ blank).
     kind: str = "explain"
+    hint_count: int = 0
+
+
+class HintsOut(BaseModel):
+    question_id: int
+    revealed: list[str]
+    hint_count: int
+    penalty_per_hint: float
+    penalty: float  # total fraction taken off the score if you submit now
 
 
 class SkipOut(BaseModel):
@@ -78,6 +87,11 @@ class FeedbackPayload(BaseModel):
     suggestions: list[str] = Field(default_factory=list)
     domain_scores: dict[str, float] = Field(default_factory=dict)
     reference_answer: str | None = None
+    # Explanation extras (filled from the rubric for every grader):
+    key_points: list[str] = Field(default_factory=list)  # every rubric point, in order
+    accepted_answers: list[str] = Field(default_factory=list)  # fill-in questions: correct code
+    hints_used: int = 0
+    hint_penalty: float = 0.0
     raw_explanation: str = ""
     provider_used: str = "heuristic"
 

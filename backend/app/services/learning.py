@@ -28,7 +28,7 @@ from app.schemas.schemas import (
     ProgressOut,
     QuestionOut,
 )
-from app.services import adaptive
+from app.services import adaptive, hints
 
 
 def ensure_user_masteries(db: Session, user: User) -> list[SkillMastery]:
@@ -73,6 +73,7 @@ def _question_out(q: Question, domain: SkillDomain) -> QuestionOut:
         code=q.code,
         prompt=q.prompt,
         kind=(q.rubric or {}).get("kind") or "explain",
+        hint_count=len((q.rubric or {}).get("hints") or []),
     )
 
 
@@ -335,6 +336,15 @@ def submit_response(
 
     payload = provider.evaluate_response(question=_question_context(question, domain_slug), answer=answer_text)
 
+    # Hints revealed for this attempt cost a little: 10% each, at most 30%.
+    used = hints.revealed_levels(db, user, question)
+    if used:
+        penalty = hints.penalty_for(used)
+        payload.hints_used = used
+        payload.hint_penalty = penalty
+        payload.overall_score = round(payload.overall_score * (1 - penalty), 3)
+        payload.domain_scores = {k: round(v * (1 - penalty), 3) for k, v in payload.domain_scores.items()}
+
     response = Response(user_id=user.id, question_id=question.id, answer_text=answer_text)
     db.add(response)
     db.flush()
@@ -356,6 +366,8 @@ def submit_response(
                 "strengths": payload.strengths,
                 "missed_concepts": payload.missed_concepts,
                 "reference_answer": payload.reference_answer,
+                "hints_used": payload.hints_used,
+                "hint_penalty": payload.hint_penalty,
             },
         )
     )

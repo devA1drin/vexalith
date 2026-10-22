@@ -7,6 +7,7 @@ User ──< SkillMastery >── SkillDomain
 User ──< Response >── Question ── SkillDomain
 User ──< QuestionSkip >── Question
 User ──< UserFeedback            (app feedback submitted by signed-in users)
+User ──< HintUsage >── Question  (progressive hints revealed while answering)
 Response ── Feedback (1:1)       (AI feedback on an answer)
 AppMeta                          (schema version for safe re-seeding)
 """
@@ -174,6 +175,18 @@ class QuestionSkip(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class HintUsage(Base):
+    """One hint level revealed by a learner for a question (counts towards a small score penalty)."""
+
+    __tablename__ = "hint_usages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"), index=True)
+    level: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 

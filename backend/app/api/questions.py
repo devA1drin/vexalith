@@ -8,7 +8,8 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.db.session import get_db
 from app.models.models import Question, User
-from app.schemas.schemas import QuestionOut, SkipOut
+from app.schemas.schemas import HintsOut, QuestionOut, SkipOut
+from app.services import hints as hint_service
 from app.services.learning import get_next_question, skip_question
 
 router = APIRouter(prefix="/questions", tags=["questions"])
@@ -59,3 +60,33 @@ def skip(
         focus=focus,
     )
     return SkipOut(skipped_question_id=question_id, next_question=nxt)
+
+
+def _hints_out(db: Session, user: User, question: Question, shown: int | None = None) -> HintsOut:
+    all_hints = hint_service.question_hints(question)
+    shown = hint_service.revealed_levels(db, user, question) if shown is None else shown
+    return HintsOut(
+        question_id=question.id,
+        revealed=all_hints[:shown],
+        hint_count=len(all_hints),
+        penalty_per_hint=hint_service.PENALTY_PER_HINT,
+        penalty=hint_service.penalty_for(shown),
+    )
+
+
+@router.get("/{question_id}/hints", response_model=HintsOut)
+def list_hints(question_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> HintsOut:
+    """Hints already revealed for the current attempt."""
+    question = db.get(Question, question_id)
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return _hints_out(db, user, question)
+
+
+@router.post("/{question_id}/hints", response_model=HintsOut)
+def reveal_hint(question_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> HintsOut:
+    """Reveal the next hint level (one at a time; each costs 10% of the score, max 30%)."""
+    question = db.get(Question, question_id)
+    if not question:
+        raise HTTPException(status_code=404, detail="Question not found")
+    return _hints_out(db, user, question, hint_service.reveal_next(db, user, question))
