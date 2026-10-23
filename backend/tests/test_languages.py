@@ -21,7 +21,7 @@ def _walk(client, h, lang, n=25):
 
 
 def test_each_language_returns_appropriate_questions(client):
-    for i, lang in enumerate(["python", "javascript", "php", "cpp", "html", "css"]):
+    for i, lang in enumerate(["python", "javascript", "php", "cpp", "java", "html", "css"]):
         qs = _walk(client, auth(pid=f"lang-{i}"), lang)
         assert {q["language"] for q in qs} <= {lang, "general"}
         assert any(q["language"] == lang for q in qs)
@@ -114,3 +114,44 @@ def test_cpp_selection_after_onboarding_rotates_through_skills(client):
 def test_cpp_is_listed_in_meta_languages(client):
     langs = client.get("/api/languages").json()
     assert {"slug": "cpp", "name": "C++"} in langs
+
+
+def test_java_level_filter_and_fill_blank_and_filipino(client):
+    h = auth(pid="lang-java-full")
+    for lvl in ("beginner", "intermediate", "advanced"):
+        q = client.get(f"/api/questions/next?language=java&difficulty={lvl}", headers=h).json()
+        assert q["difficulty"] == lvl
+        assert q["language"] in ("java", "general")
+        assert q["hint_count"] == 3
+    hr = client.post(f"/api/questions/{q['id']}/hints", headers=h).json()
+    assert len(hr["revealed"]) == 1 and hr["hint_count"] == 3
+
+    # Verify Java fill_blank grading via API
+    from app.db.session import SessionLocal
+    from app.models.models import Question
+    with SessionLocal() as db:
+        fb_q = db.query(Question).filter_by(title="Missing code: print a line in Java", language="java").one()
+        fb_id = fb_q.id
+        str_q = db.query(Question).filter_by(title="Comparing Strings: == vs .equals()", language="java").one()
+        str_id = str_q.id
+
+    r1 = client.post("/api/responses", headers=h, json={"question_id": fb_id, "answer_text": "System.out.println(msg);"})
+    assert r1.status_code == 201
+    assert r1.json()["feedback"]["verdict"] == "correct"
+
+    # Verify Taglish/Filipino answer on a Java question
+    r2 = client.post(
+        "/api/responses",
+        headers=h,
+        json={
+            "question_id": str_id,
+            "answer_text": (
+                "Nagpi-print ito ng false at true dahil ang == ay nagko-compare ng reference address sa memory "
+                "at ang new String ay gumagawa ng bagong object, habang ang .equals ay nagko-compare ng parehong karakter."
+            ),
+        },
+    )
+    assert r2.status_code == 201
+    fb2 = r2.json()["feedback"]
+    assert fb2["verdict"] == "correct"
+    assert fb2["answer_language"] in ("fil", "taglish")

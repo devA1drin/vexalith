@@ -33,7 +33,7 @@ def test_all_languages_are_known():
 
 def test_new_language_volume_per_level():
     counts = Counter((q["language"], q["difficulty"]) for q in SEED_QUESTIONS)
-    for lang in ("html", "css", "php", "cpp"):
+    for lang in ("html", "css", "php", "cpp", "java"):
         for level in LEVELS:
             assert counts[(lang, level)] >= 6, (lang, level)
 
@@ -76,7 +76,7 @@ def test_reference_answers_pass_their_own_rubric():
 
 def test_fundamentals_volume_per_language_and_level():
     counts = Counter((q["language"], q["difficulty"]) for q in SEED_QUESTIONS if q["domain"] == "fundamentals")
-    minimum = {"python": 8, "javascript": 8, "php": 8, "cpp": 8, "html": 6, "css": 6, "general": 5}
+    minimum = {"python": 8, "javascript": 8, "php": 8, "cpp": 8, "java": 8, "html": 6, "css": 6, "general": 5}
     for lang, n in minimum.items():
         for level in LEVELS:
             assert counts[(lang, level)] >= n, (lang, level, counts[(lang, level)])
@@ -93,3 +93,11 @@ def test_cpp_covers_every_core_domain_level_and_algorithms():
             assert (d, level) in seen, (d, level)
     assert {"beginner", "intermediate", "advanced"} <= {lvl for d, lvl in seen if d == "algorithms"}
     assert sum(1 for q in SEED_QUESTIONS if q["language"] == "cpp") >= 50
+
+
+def test_java_covers_every_core_domain_level_and_algorithms():
+    seen = {(q["domain"], q["difficulty"]) for q in SEED_QUESTIONS if q["language"] == "java"}
+    for d in CORE + ["fundamentals", "algorithms"]:
+        for level in LEVELS:
+            assert (d, level) in seen, (d, level)
+    assert sum(1 for q in SEED_QUESTIONS if q["language"] == "java") >= 65
