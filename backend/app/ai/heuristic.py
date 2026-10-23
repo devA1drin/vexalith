@@ -220,6 +220,10 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
         suggestions.append("For each edge case, state the input, the expected result, and the actual result.")
     elif question.domain_slug == "debugging":
         suggestions.append("Name the root cause, show a failing input, and give the corrected code.")
+    elif question.domain_slug == "oop":
+        suggestions.append(
+            "Trace which object self / this / $this refers to, which class defines the method, and whether the attribute lives on the class or the instance."
+        )
     if not suggestions:
         suggestions.append("Great work — try explaining an alternative approach and its tradeoffs.")
 

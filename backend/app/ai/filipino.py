@@ -78,17 +78,25 @@ GLOSSARY: dict[str, str] = {
     "aytem": "item", "susi": "key", "halaga": "value", "laman": "contents|value", "salita": "word|string",
     "titik": "letter|character", "letra": "letter|character", "pangalan": "name", "uri": "type", "tipo": "type",
     "sukat": "size|length", "haba": "length|long", "posisyon": "position|index", "lugar": "place|position",
-    "kopya": "copy|copies", "orihinal": "original", "sarili": "own|itself", "bagay": "object|thing",
-    "obheto": "object", "katangian": "property|attribute", "klase": "class", "punsyon": "function",
+    "kopya": "copy|copies", "orihinal": "original", "sarili": "own|itself", "bagay": "object|instance|thing",
+    "obheto": "object|instance", "katangian": "property|attribute|field", "klase": "class|classes",
+    "paraan": "method|way|approach", "mana": "inherit|inheritance|inherits|inherited",
+    "magulang": "parent|base|superclass", "anak": "child|derived|subclass",
+    "tagagawa": "constructor|creator", "tagawasak": "destructor",
+    "pribado": "private|encapsulated", "pampubliko": "public", "publiko": "public", "protektado": "protected",
+    "instansya": "instance|object", "abstrakto": "abstract", "interpeys": "interface",
+    "polimorpismo": "polymorphism|polymorphic", "enkapsulasyon": "encapsulation|encapsulated",
+    "komposisyon": "composition", "hulmahan": "blueprint|template", "plano": "blueprint|plan",
+    "kontrata": "contract|interface", "punsyon": "function",
     "baryabol": "variable", "memorya": "memory", "alaala": "memory", "tirahan": "address",
     "turo": "point|points|points to", "linya": "line", "espasyo": "space|whitespace", "puwang": "space|gap",
     "tuldok": "dot|period", "kuwit": "comma", "panipi": "quote", "panaklong": "parenthesis|bracket",
     "pahina": "page", "kulay": "color", "pindutan": "button", "pindot": "press|click", "lalagyan": "container",
-    "kahon": "box", "oras": "time", "petsa": "date", "halimbawa": "example", "kaso": "case",
+    "kahon": "box", "oras": "time", "petsa": "date", "halimbawa": "example|instance", "kaso": "case",
     # actions
     "balik": "return|returns|back", "tawag": "call|called|calls", "gamit": "use|uses|used",
     "palit": "change|replace|swap", "gawa": "created|made|make|do", "likha": "created|create",
-    "takda": "set|assigned|defined", "lagay": "put|store|set|assign", "tago": "store|hidden|hide",
+    "takda": "set|assigned|defined", "lagay": "put|store|set|assign", "tago": "store|hidden|hide|private|encapsulated",
     "imbak": "store|stored", "hawak": "holds|hold", "kuha": "get|got|take", "tanggap": "accept|accepted|receive",
     "pasa": "pass|passed", "abot": "reach|reaches", "dating": "reach|arrive", "sara": "closed|close",
     "bukas": "open", "basa": "read|reads", "sulat": "write|writes", "pakita": "show|display|print",
@@ -122,6 +130,12 @@ FORMS: dict[str, str] = {
     "lumalaki": "grows|increases|bigger", "lumaki": "grew|grows|bigger", "tumataas": "increases|grows|goes up",
     "nangyayari": "happens", "nangyari": "happened|happens", "mangyayari": "will happen|happens",
     "ipinapakita": "shows|prints|displays", "nagpapakita": "shows|prints", "ipakita": "show|print|display",
+    "minana": "inherited|inherit|inheritance", "namana": "inherited|inherit|inheritance",
+    "nagmamana": "inherits|inherit|inheritance|subclass|child", "magmana": "inherit|inherits|inheritance",
+    "pagmamana": "inheritance|inherit", "pamamaraan": "method|approach",
+    "nakatago": "private|hidden|encapsulated", "itinatago": "hides|private|encapsulates",
+    "pribadong": "private|encapsulated", "pampublikong": "public", "protektadong": "protected",
+    "sariling": "own|separate|independent", "magkahiwalay": "separate|independent",
 }
 
 # Multi-word phrases, matched before single words.
@@ -170,6 +184,11 @@ PHRASES: list[tuple[str, str]] = [
     ("wala nang", "no more"), ("isa isa", "one by one|one at a time"), ("isa-isa", "one by one|one at a time"),
     ("kaliwa pakanan", "left to right"), ("mula kaliwa pakanan", "left to right"),
     ("itaas pababa", "top to bottom"), ("mula itaas pababa", "top to bottom"),
+    ("klase ng magulang", "parent class|base class|superclass"), ("magulang na klase", "parent class|base class|superclass"),
+    ("anak na klase", "child class|derived class|subclass"), ("klase ng anak", "child class|derived class|subclass"),
+    ("bagong bagay", "new object|new instance"), ("bagong halimbawa", "new instance|new object"),
+    ("magkaibang bagay", "separate instances|different objects"), ("magkahiwalay na bagay", "separate instances|separate objects"),
+    ("sariling kopya", "own copy|separate copy"), ("parehong klase", "same class"),
 ]
 
 # Grammar words without an English counterpart: dropped from the gloss.
@@ -202,7 +221,8 @@ EN_VERBS = frozenset(
     "sanitize bind reference point allocate free leak overflow round truncate divide multiply subtract "
     "concatenate concat join split trim parse format override inherit extend implement import export "
     "define initialize init reset clear count sum exit enter wait await resolve reject map filter reduce "
-    "access mutate modify execute evaluate shadow hoist share".split()
+    "access mutate modify execute evaluate shadow hoist share construct instantiate encapsulate "
+    "delegate slice dispatch".split()
 )
 
 EN_TECH = frozenset(
@@ -210,7 +230,11 @@ EN_TECH = frozenset(
     "key object class method file line output input result total error bug code program first second last "
     "next part decimal remainder double integer division memory pointer address default copy reference case "
     "type types true false null empty shared same infinite missing included excluded fix change still "
-    "always never only once twice times since though even".split()
+    "always never only once twice times since though even instance instances constructor destructor "
+    "subclass superclass base derived virtual override overrides overriding polymorphism polymorphic "
+    "encapsulation encapsulated abstract interface static private protected public getter setter "
+    "property properties attribute attributes methods classes objects super self prototype composition "
+    "inheritance inherited slice slicing sliced subobject blueprint hierarchy contract bound unbound callback".split()
 )
 
 _VOWELS = set("aeiou")

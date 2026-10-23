@@ -18,8 +18,8 @@ const LEVELS: { id: Difficulty; label: string; hint: string }[] = [
 const TOPIC_NAMES: Record<string, string> = {
   fundamentals: "Fundamentals", code_tracing: "Code Tracing", debugging: "Debugging",
   algorithmic_thinking: "Algorithmic Thinking", edge_cases_testing: "Edge Cases & Testing",
-  code_review_design: "Code Review & Design", data_structures: "Data Structures", algorithms: "Algorithms",
-  logic_problems: "Logic Problems",
+  code_review_design: "Code Review & Design", data_structures: "Data Structures",
+  oop: "Object-Oriented Programming", algorithms: "Algorithms", logic_problems: "Logic Problems",
 };
 const LANGS: { id: Language; label: string }[] = [
   { id: "python", label: "Python" },
@@ -164,11 +164,17 @@ export default function PracticePage() {
     if (!feedback) loadNext(language);
   }
 
-  function clearTopic() {
-    setTopic(null);
-    optsRef.current = { ...optsRef.current, topic: null };
-    window.history.replaceState(null, "", "/practice");
+  function onTopic(next: string | null) {
+    const valid = next && next in TOPIC_NAMES ? next : null;
+    if (valid === topic) return;
+    setTopic(valid);
+    optsRef.current = { ...optsRef.current, topic: valid };
+    window.history.replaceState(null, "", valid ? `/practice?topic=${valid}` : "/practice");
     if (!feedback) loadNext(language);
+  }
+
+  function clearTopic() {
+    onTopic(null);
   }
 
   function onFocusToggle() {
@@ -266,7 +272,23 @@ export default function PracticePage() {
             </button>
           ))}
         </div>
-        {difficulty === "adaptive" && <span className="font-mono text-[11px] text-ink-500">level follows your results</span>}
+        <label className="flex items-center gap-2">
+          <span className="label">Topic</span>
+          <select
+            aria-label="Topic"
+            data-testid="topic-select"
+            value={topic ?? ""}
+            onChange={(e) => onTopic(e.target.value || null)}
+            disabled={busy !== null}
+            className="border border-ink-700 bg-ink-950 px-2.5 py-1.5 font-mono text-[12px] text-ink-100 focus:border-accent focus:outline-none"
+          >
+            <option value="">All topics (adaptive)</option>
+            {Object.entries(TOPIC_NAMES).map(([slug, label]) => (
+              <option key={slug} value={slug}>{label}</option>
+            ))}
+          </select>
+        </label>
+        {difficulty === "adaptive" && !topic && <span className="font-mono text-[11px] text-ink-500">level follows your results</span>}
         {topic && (
           <span className="chip gap-2 border-accent text-accent" data-testid="topic-chip">
             Topic: {TOPIC_NAMES[topic] ?? topic}

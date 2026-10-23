@@ -46,7 +46,7 @@ def test_general_selection_is_language_agnostic(client):
     graduate(client, h, "general")
     qs = _walk(client, h, "general", n=30)
     assert {q["language"] for q in qs} == {"general"}
-    assert {q["domain_slug"] for q in qs} <= {"fundamentals", "logic_problems", "algorithms"}
+    assert {q["domain_slug"] for q in qs} <= {"fundamentals", "logic_problems", "algorithms", "oop"}
     assert {"logic_problems", "algorithms"} <= {q["domain_slug"] for q in qs}
 
 

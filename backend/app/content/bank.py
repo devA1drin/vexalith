@@ -14,6 +14,7 @@ from app.content.questions_html import QUESTIONS_HTML
 from app.content.questions_logic import QUESTIONS_LOGIC
 from app.content.questions_loops import QUESTIONS_LOOPS
 from app.content.questions_missing_code import QUESTIONS_MISSING_CODE
+from app.content.questions_oop import QUESTIONS_OOP
 from app.content.questions_part1 import QUESTIONS_PART1
 from app.content.questions_part2 import QUESTIONS_PART2
 from app.content.questions_php import QUESTIONS_PHP
@@ -40,4 +41,5 @@ SEED_QUESTIONS = with_hints(
     + QUESTIONS_ALGORITHMS
     + QUESTIONS_LOOPS
     + QUESTIONS_MISSING_CODE
+    + QUESTIONS_OOP
 )
