@@ -234,7 +234,9 @@ EN_TECH = frozenset(
     "subclass superclass base derived virtual override overrides overriding polymorphism polymorphic "
     "encapsulation encapsulated abstract interface static private protected public getter setter "
     "property properties attribute attributes methods classes objects super self prototype composition "
-    "inheritance inherited slice slicing sliced subobject blueprint hierarchy contract bound unbound callback".split()
+    "inheritance inherited slice slicing sliced subobject blueprint hierarchy contract bound unbound callback "
+    "println equals nullpointerexception arraylist hashmap hashset final primitive primitives boxed autoboxing "
+    "exception exceptions try catch finally implements extends".split()
 )
 
 _VOWELS = set("aeiou")

@@ -23,7 +23,7 @@ from app.models.models import DailyCompletion, Question, SkillDomain, User
 
 MANILA = timezone(timedelta(hours=8), "Asia/Manila")
 EPOCH = date(2026, 1, 1)
-ROTATION = ["python", "javascript", "cpp", "general", "php", "css", "html"]
+ROTATION = ["python", "javascript", "cpp", "java", "general", "php", "css", "html"]
 DOMAIN_ORDER = [
     "fundamentals", "code_tracing", "debugging", "algorithmic_thinking", "edge_cases_testing",
     "code_review_design", "data_structures", "oop", "algorithms", "logic_problems",

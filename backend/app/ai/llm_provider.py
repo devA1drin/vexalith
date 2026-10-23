@@ -23,7 +23,7 @@ from app.schemas.schemas import FeedbackPayload, Finding, ReasoningGap
 logger = logging.getLogger(__name__)
 
 FEEDBACK_SYSTEM = """You are Vexalith, a rigorous but encouraging programming tutor.
-A learner was shown a snippet (Python, JavaScript, PHP, C++, HTML, CSS, or a
+A learner was shown a snippet (Python, JavaScript, PHP, C++, Java, HTML, CSS, or a
 language-agnostic "general" problem statement) and a question: predict output or
 rendering, find a bug, analyse complexity, list edge cases, review design or
 security, choose a data structure, reason about object-oriented programming (classes,
@@ -40,7 +40,10 @@ semantics, accessibility and parser/form behaviour; for CSS the cascade,
 specificity, box model and layout algorithms; for PHP loose vs strict
 comparison, references, array semantics and injection/XSS safety; for C++
 value vs reference semantics, object lifetime and RAII, integer types and
-overflow, iterator invalidation and undefined behaviour; for logic
+overflow, iterator invalidation and undefined behaviour; for Java primitive
+vs reference types, == vs .equals() on Strings and boxed integers, autoboxing,
+NullPointerException, final, checked/unchecked exceptions, ArrayList/HashMap
+and interfaces/inheritance; for logic
 problems accept any valid proof, not just the reference wording.
 For the "fundamentals" skill the learner may be a complete beginner: write the
 feedback in plain, friendly language, define any term you use (e.g. "falsy",
@@ -79,14 +82,16 @@ Return ONLY a JSON object (no markdown) with exactly these keys:
 
 QUESTION_SYSTEM = """You are a curriculum designer for programming critical thinking.
 Create ONE original practice item with a short, self-contained snippet
-(5-20 lines) in the requested language: python, javascript, php, cpp (C++17),
+(5-20 lines) in the requested language: python, javascript, php, cpp (C++17), java (Java 17),
 html, css, or
 "general" (a plain-text problem statement for logic puzzles or algorithm
 problems, no code required). Match the skill domain: e.g. HTML → semantics,
 accessibility, forms, DOM structure; CSS → cascade, specificity, box model,
 flex/grid outcomes; PHP → output tracing, type juggling, arrays, security;
 C++ → value/reference semantics, pointers, RAII and smart pointers, STL
-containers and algorithms, templates, undefined behaviour;
+containers and algorithms, templates, undefined behaviour; Java → primitives
+vs references, String == vs .equals(), ArrayList/HashMap/HashSet, exceptions,
+classes, interfaces and @Override;
 fundamentals → absolute-beginner basics (variables, types, operators, strings,
 if/else, loops, functions, lists/dicts, null, simple errors; HTML structure and
 tags; CSS selectors, units, box model, display, flexbox; algorithms, pseudocode,

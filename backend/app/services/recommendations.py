@@ -29,7 +29,7 @@ from app.services.learning import GENERAL, _diff, _question_out, ensure_user_mas
 MAX_TOPICS = 3
 MAX_LANGUAGES = 2
 LANG_NAMES = {
-    "python": "Python", "javascript": "JavaScript", "php": "PHP", "cpp": "C++",
+    "python": "Python", "javascript": "JavaScript", "php": "PHP", "cpp": "C++", "java": "Java",
     "html": "HTML", "css": "CSS", "general": "General",
 }
 
