@@ -390,4 +390,91 @@ while i < n:
       "the start: i = 0 and total = 0, the empty sum. Each pass adds a[i] and then increases i by 1, so the invariant "
       "stays true (it is maintained). The loop ends because i grows by 1 towards n, and it ends with i = n, so total "
       "is the sum of the first n elements: all of them."),
+    # ── Java ────────────────────────────────────────────────────────────────
+    Q(F, "beginner", "java", "Enhanced for-each loop over an int[]",
+      """int[] nums = {2, 4, 6};
+int total = 0;
+for (int n : nums) {
+    total += n;
+}
+System.out.println(total);""",
+      "What does this print? Walk through each pass of the for-each loop.",
+      [("prints 12", ["12", "prints 12"], 2),
+       ("n takes the values 2, 4, and 6 in order, adding them into total (0 -> 2 -> 6 -> 12)", ["2, 4, 6", "2, 4, and 6", "0 -> 2", "each element"], 1.5)],
+      [],
+      "It prints 12. The enhanced `for (int n : nums)` loop visits each element in `nums` in order: `n` is 2 (total "
+      "becomes 2), then 4 (total becomes 6), then 6 (total becomes 12)."),
+
+    Q(F, "beginner", "java", "Counting down by twos in Java",
+      """for (int i = 6; i > 0; i -= 2) {
+    System.out.print(i + " ");
+}""",
+      "What does this print, and why does the loop stop before printing 0?",
+      [("prints 6 4 2", ["6 4 2"], 2),
+       ("starts at 6 and subtracts 2 each pass; when i becomes 0 the condition i > 0 is false so the loop stops", ["i > 0", "becomes 0", "subtracts 2", "decreases by 2"], 1.5)],
+      [("thinks it prints 6 4 2 0", ["6 4 2 0"], "When i reaches 0, i > 0 is false, so the body does not run for 0.")],
+      "It prints 6 4 2. The loop starts at `i = 6` and subtracts 2 after each pass (`6`, `4`, `2`). When `i` becomes "
+      "`0`, the condition `i > 0` is false and the loop terminates before printing 0."),
+
+    Q("code_tracing", "intermediate", "java", "continue inside a Java for loop",
+      """for (int i = 1; i <= 5; i++) {
+    if (i % 2 == 0) {
+        continue;
+    }
+    System.out.print(i + " ");
+}""",
+      "What does this print, and why doesn't continue cause an infinite loop here?",
+      [("prints 1 3 5", ["1 3 5"], 2),
+       ("in a for loop, continue jumps to the update step (i++) before re-checking i <= 5, skipping only even numbers", ["i++", "update step", "even", "skips"], 1.5)],
+      [],
+      "It prints 1 3 5. When `i` is even (`2` and `4`), `continue` skips `System.out.print` and jumps to the `for` "
+      "loop's update expression `i++`, so `i` still advances on every iteration and the loop finishes cleanly."),
+
+    Q("debugging", "intermediate", "java", "Off-by-one <= arr.length in a Java loop",
+      """int[] arr = {10, 20, 30};
+int sum = 0;
+for (int i = 0; i <= arr.length; i++) {
+    sum += arr[i];
+}""",
+      "What exception does this loop throw, on which value of i, and how do you fix the loop header?",
+      [("throws ArrayIndexOutOfBoundsException when i reaches 3 (arr.length)", ["arrayindexoutofboundsexception", "i == 3", "i reaches 3", "index 3"], 2),
+       ("valid indices are 0..arr.length - 1, so fix the condition to i < arr.length", ["i < arr.length", "arr.length - 1"], 1.5)],
+      [],
+      "It throws `ArrayIndexOutOfBoundsException` when `i` reaches `3` (`arr.length`). A 3-element array has valid "
+      "indices `0`, `1`, and `2`; change the condition from `i <= arr.length` to `i < arr.length`."),
+
+    Q("code_tracing", "advanced", "java", "Labeled break outer in nested Java loops",
+      """int hits = 0;
+outer:
+for (int r = 0; r < 3; r++) {
+    for (int c = 0; c < 3; c++) {
+        if (r == 1 && c == 1) {
+            break outer;
+        }
+        hits++;
+    }
+}
+System.out.println(hits);""",
+      "What does this print, and how does break outer differ from an unlabeled break?",
+      [("prints 4", ["4", "prints 4"], 2),
+       ("counts (0,0), (0,1), (0,2), and (1,0) = 4 hits, then break outer exits both the inner and outer loops immediately (whereas unlabeled break would only exit the inner c loop)", ["both loops", "outer loop", "labeled outer", "inner loop", "(1,0)"], 1.5)],
+      [("thinks it prints 7", ["prints 7"], "An unlabeled break would only skip the rest of row 1 and continue with row 2 (7 hits), but break outer terminates the outer loop too.")],
+      "It prints 4. Row `r = 0` increments `hits` 3 times (`c = 0, 1, 2`), and row `r = 1` increments `hits` once at "
+      "`c = 0` (to 4). At `r = 1, c = 1`, `break outer;` exits the labeled outer `r` loop immediately, whereas a plain "
+      "`break;` would only exit the inner `c` loop."),
+
+    Q("debugging", "advanced", "java", "Assigning to the for-each variable does not modify the array",
+      """int[] prices = {10, 20, 30};
+for (int p : prices) {
+    p = p * 2;
+}
+System.out.println(prices[0] + " " + prices[1]);""",
+      "What does this print, why didn't prices change, and how do you double every element in place?",
+      [("prints 10 20", ["10 20"], 2),
+       ("the for-each variable p is a local copy of each element, so p = p * 2 only modifies p and not the array slot", ["local copy", "copy of each", "does not modify"], 1.5),
+       ("fix: use an indexed loop for (int i = 0; i < prices.length; i++) prices[i] *= 2;", ["prices[i]", "indexed"], 1)],
+      [("thinks it prints 20 40", ["20 40"], "In Java's enhanced for loop, int p holds a copy of each array element; reassigning p does not write back to prices.")],
+      "It prints 10 20. In `for (int p : prices)`, `p` is a local variable that receives a copy of each element; "
+      "`p = p * 2` only overwrites that local variable. To mutate the array in place, use an indexed loop: "
+      "`for (int i = 0; i < prices.length; i++) prices[i] *= 2;`."),
 ]

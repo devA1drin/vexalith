@@ -458,4 +458,77 @@ print best""",
        [],
        "The base case is e == 0, because b to the power 0 is 1. Each call lowers e by 1, so it eventually reaches 0 and "
        "stops; without a base case the recursion never stops and ends in a stack overflow."),
+    # ── Java ────────────────────────────────────────────────────────────────
+    FB(F, "beginner", "java", "Missing code: print a line in Java",
+       """String msg = "Ready";
+____;
+// should print Ready followed by a newline""",
+       "Fill in the statement so Java prints msg followed by a newline.",
+       ["System.out.println(msg)"],
+       [("System.out.println prints the value to standard output and ends the line", ["system.out.println", "newline", "standard output"], 1)],
+       [],
+       "The missing statement is System.out.println(msg). `System.out.println` writes `msg` to standard output and "
+       "appends a newline."),
+
+    FB(F, "beginner", "java", "Missing code: compare two Strings by content in Java",
+       """String input = "open";
+if (____) {
+    System.out.println("unlocked");
+}""",
+       'Fill in the condition using .equals so it checks whether input has the characters "open".',
+       ['input.equals("open")', '"open".equals(input)'],
+       [(".equals compares the character contents of two Strings, whereas == only compares object references", ["equals", "character", "content", "reference"], 1)],
+       [('uses input == "open"', ['input == "open"'], "== compares object references in Java; use .equals(...) to compare String contents.")],
+       'The condition is input.equals("open") (or "open".equals(input)). In Java, `.equals` compares the characters '
+       "inside two Strings, whereas `==` checks whether two references point to the same object."),
+
+    FB(F, "intermediate", "java", "Missing code: enhanced for-each header in Java",
+       """String[] names = {"Ada", "Lin"};
+for (____) {
+    System.out.println(name);
+}""",
+       "Fill in the for-each header so name visits each String in names.",
+       ["String name : names", "var name : names"],
+       [("Java's enhanced for loop uses Type variable : collection syntax", ["colon", "for-each", "each element", "names"], 1)],
+       [],
+       "The blank is String name : names (or var name : names). Java's enhanced `for` loop uses a colon (`:`) to "
+       "bind `name` to each element of `names` in order."),
+
+    FB("data_structures", "intermediate", "java", "Missing code: count with HashMap.getOrDefault",
+       """Map<String, Integer> counts = new HashMap<>();
+for (String w : words) {
+    counts.put(w, ____ + 1);
+}""",
+       "Fill in the blank using getOrDefault so each word's count starts at 0 and increments by 1.",
+       ["counts.getOrDefault(w, 0)"],
+       [("getOrDefault(w, 0) returns the existing count for w or 0 when w is not in the map yet", ["getordefault", "0", "absent", "existing"], 1)],
+       [("uses counts.get(w)", ["counts.get(w)"], "counts.get(w) returns null when w is not in the map yet, causing a NullPointerException when adding 1.")],
+       "The blank is counts.getOrDefault(w, 0). When `w` is not yet in `counts`, `getOrDefault(w, 0)` returns `0` "
+       "instead of `null`, avoiding a `NullPointerException` when adding 1."),
+
+    FB("code_review_design", "advanced", "java", "Missing code: null-safe guard before calling a String method",
+       """static boolean isBlankOrNull(String s) {
+    return ____ || s.isBlank();
+}""",
+       "Fill in the left side of || so calling isBlankOrNull(null) returns true without throwing NullPointerException.",
+       ["s == null", "Objects.isNull(s)"],
+       [("short-circuit || returns true immediately when s == null so s.isBlank() is never called on null", ["short-circuit", "s == null", "nullpointerexception", "never called"], 1)],
+       [],
+       "The blank is s == null. Because `||` short-circuits, when `s` is `null` the left side `s == null` is true "
+       "and Java returns `true` immediately without calling `s.isBlank()`."),
+
+    FB("algorithms", "advanced", "java", "Missing code: overflow-safe midpoint in Java binary search",
+       """int lo = 0, hi = nums.length - 1;
+while (lo <= hi) {
+    int mid = ____;
+    if (nums[mid] == target) return mid;
+    if (nums[mid] < target) lo = mid + 1;
+    else hi = mid - 1;
+}""",
+       "Fill in the overflow-safe expression for mid using lo and hi.",
+       ["lo + (hi - lo) / 2", "(lo + hi) >>> 1", "lo + ((hi - lo) >> 1)"],
+       [("lo + (hi - lo) / 2 (or unsigned right shift >>> 1) avoids 32-bit signed int overflow when lo + hi > Integer.MAX_VALUE", ["overflow", "hi - lo", ">>> 1", "max_value"], 1)],
+       [],
+       "The blank is lo + (hi - lo) / 2 (or (lo + hi) >>> 1). Subtracting `hi - lo` first (or using unsigned shift "
+       "`>>> 1`) prevents 32-bit signed `int` overflow when `lo + hi` exceeds `Integer.MAX_VALUE`."),
 ]

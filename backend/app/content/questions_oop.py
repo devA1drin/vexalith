@@ -7,6 +7,7 @@ PY = "python"
 JS = "javascript"
 PHP = "php"
 CPP = "cpp"
+JAVA = "java"
 GEN = "general"
 
 QUESTIONS_OOP = [
@@ -1005,4 +1006,221 @@ def resize_and_check(rect: Rectangle):
       "is 16 instead of 20. This violates the Liskov Substitution Principle (LSP): a mutable Square cannot be "
       "substituted where a mutable Rectangle is expected because Rectangle's contract assumes width and height vary "
       "independently. Make both classes immutable shapes implementing a Shape.area() interface instead."),
+
+    # ── Java · Beginner ─────────────────────────────────────────────────────
+    Q(D, "beginner", JAVA, "Java class, constructor, and separate instances",
+      """class Counter {
+    private int count;
+
+    public Counter(int start) {
+        this.count = start;
+    }
+    public void increment() {
+        this.count++;
+    }
+    public int getCount() {
+        return this.count;
+    }
+}
+Counter a = new Counter(10);
+Counter b = new Counter(0);
+a.increment();
+System.out.println(a.getCount() + " " + b.getCount());""",
+      "What does this print, and why doesn't a.increment() change b.getCount()?",
+      [("prints 11 0", ["11 0", "11 and 0"], 2),
+       ("each new Counter(...) allocates a separate object in memory with its own instance field count", ["separate", "own", "instance", "two objects", "independent"], 1.5)],
+      [],
+      "It prints 11 0. Each `new Counter(...)` call allocates an independent `Counter` instance on the heap and "
+      "initializes its own `this.count` field (`10` for `a`, `0` for `b`), so `a.increment()` only increments `a.count`."),
+
+    Q(D, "beginner", JAVA, "Parameter shadowing a field without this in Java",
+      """class User {
+    private String name;
+
+    public User(String name) {
+        name = name;
+    }
+    public String getName() {
+        return this.name;
+    }
+}
+System.out.println(new User("Ada").getName());""",
+      "What does this print, why, and how do you fix the constructor?",
+      [("prints null", ["null", "prints null"], 2),
+       ("the parameter name shadows the field name, so name = name assigns the parameter to itself and leaves this.name at its default value null", ["shadow", "itself", "parameter", "this.name"], 1.5),
+       ("fix: write this.name = name;", ["this.name = name"], 1)],
+      [("thinks it prints Ada", ["prints ada"], "Without this., bare name inside User(String name) refers to the parameter, leaving the instance field this.name as null.")],
+      "It prints null. Inside `User(String name)`, the parameter `name` shadows the field `name`, so `name = name;` "
+      "assigns the parameter to itself and leaves the instance field `this.name` at its default value (`null`). Fix "
+      "it by writing `this.name = name;`."),
+
+    FB(D, "beginner", JAVA, "Missing code: assign the constructor parameter to the Java field",
+       """class BankAccount {
+    private int balance;
+
+    public BankAccount(int balance) {
+        ____;
+    }
+    public int getBalance() { return this.balance; }
+}""",
+       "Fill in the constructor body so the field balance is initialized with the parameter balance.",
+       ["this.balance = balance"],
+       [("this.balance refers to the instance field while bare balance is the constructor parameter", ["this.balance", "instance field", "parameter", "shadow"], 1)],
+       [("writes balance = balance", ["balance = balance"], "balance = balance assigns the parameter to itself and leaves the field this.balance as 0.")],
+       "The blank is this.balance = balance. Qualifying with `this.` disambiguates the instance field `this.balance` "
+       "from the constructor parameter `balance`."),
+
+    # ── Java · Intermediate ─────────────────────────────────────────────────
+    Q(D, "intermediate", JAVA, "Encapsulation with private fields and a validating setter in Java",
+      """public class Wallet {
+    private int cents;
+
+    public int getCents() { return cents; }
+
+    public void deposit(int amount) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("amount must be positive");
+        }
+        this.cents += amount;
+    }
+}""",
+      "How does making cents private and exposing deposit(int) protect Wallet's invariant?",
+      [("external code cannot set cents to a negative value directly (w.cents = -50 fails to compile), and deposit rejects non-positive amounts", ["private", "negative", "compile", "deposit", "invariant", "encapsulat"], 2),
+       ("getCents() provides read access while deposit(int) enforces validation on every state change", ["getcents", "read", "state change", "enforces"], 1)],
+      [],
+      "Declaring `cents` as `private` prevents outside classes from writing `w.cents = -50` directly (a compile-time "
+      "error). Every state change must go through `deposit(int)`, which enforces `amount > 0` and guarantees `cents` "
+      "can never become negative."),
+
+    Q(D, "intermediate", JAVA, "Inheritance with extends and super(...) in Java",
+      """class Employee {
+    protected final String name;
+    public Employee(String name) { this.name = name; }
+    public int pay() { return 1000; }
+}
+class Manager extends Employee {
+    private final int bonus;
+    public Manager(String name, int bonus) {
+        super(name);
+        this.bonus = bonus;
+    }
+    @Override
+    public int pay() { return super.pay() + bonus; }
+}
+System.out.println(new Manager("Lin", 300).pay());""",
+      "What does this print, and what two roles does super play in Manager?",
+      [("prints 1300", ["1300", "prints 1300"], 2),
+       ("super(name) must be the first statement in Manager's constructor to initialize Employee.name, and super.pay() calls Employee's overridden pay() method (1000) before adding bonus (300)", ["super(name)", "first statement", "super.pay()", "employee"], 1.5)],
+      [],
+      "It prints 1300. Inside `Manager`'s constructor, `super(name)` runs first to invoke `Employee(String)` and "
+      "initialize `this.name`. Inside the overridden `pay()` method, `super.pay()` calls `Employee.pay()` (`1000`) "
+      "and adds `bonus` (`300`)."),
+
+    FB(D, "intermediate", JAVA, "Missing code: call the superclass constructor in Java",
+       """class Vehicle {
+    protected final String brand;
+    public Vehicle(String brand) {
+        this.brand = brand;
+    }
+}
+class Truck extends Vehicle {
+    private final int payloadKg;
+    public Truck(String brand, int payloadKg) {
+        ____;
+        this.payloadKg = payloadKg;
+    }
+}""",
+       "Fill in the first statement of Truck's constructor so Vehicle initializes brand.",
+       ["super(brand)"],
+       [("super(brand) invokes the superclass constructor Vehicle(String) and must be the first statement in the subclass constructor", ["super(brand)", "superclass", "parent", "first statement"], 1)],
+       [],
+       "The blank is super(brand). Because `Vehicle` has no no-arg constructor, `Truck` must explicitly call "
+       "`super(brand)` as the first statement of its constructor."),
+
+    Q(D, "intermediate", JAVA, "Static field vs instance field in a Java class",
+      """class Session {
+    private static int total = 0;
+    private final int id;
+
+    public Session() {
+        total++;
+        this.id = total;
+    }
+    public int getId() { return id; }
+    public static int getTotal() { return total; }
+}
+Session s1 = new Session();
+Session s2 = new Session();
+System.out.println(s1.getId() + " " + s2.getId() + " " + Session.getTotal());""",
+      "What does this print, and why is total declared static while id is an instance field?",
+      [("prints 1 2 2", ["1 2 2"], 2),
+       ("static total belongs to the Session class itself and is shared across all instances, while id is a per-instance field so s1 keeps 1 and s2 gets 2", ["static", "shared", "class", "per-instance", "instance field"], 1.5)],
+      [],
+      "It prints 1 2 2. `total` is a `static` field shared by the `Session` class as a whole, so constructing `s1` "
+      "and `s2` increments `total` from 0 to 1 to 2. `id` is an instance field on each `Session` object, so `s1.id` "
+      "stays 1 while `s2.id` is 2."),
+
+    # ── Java · Advanced ─────────────────────────────────────────────────────
+    Q(D, "advanced", JAVA, "Polymorphism and @Override dispatch in Java",
+      """interface Shape {
+    int area();
+}
+class Rect implements Shape {
+    private final int w, h;
+    Rect(int w, int h) { this.w = w; this.h = h; }
+    @Override public int area() { return w * h; }
+}
+class Square implements Shape {
+    private final int s;
+    Square(int s) { this.s = s; }
+    @Override public int area() { return s * s; }
+}
+List<Shape> shapes = List.of(new Rect(3, 4), new Square(5));
+int sum = 0;
+for (Shape sh : shapes) sum += sh.area();
+System.out.println(sum);""",
+      "What does this print, how does Java choose which area() method to run, and why is @Override valuable?",
+      [("prints 37 (12 + 25)", ["37", "prints 37"], 2),
+       ("Java uses dynamic (virtual) method dispatch at runtime based on each object's actual class (Rect vs Square), not the variable type Shape", ["dynamic", "runtime", "actual class", "polymorph"], 1.5),
+       ("@Override makes the compiler fail if the method signature does not match a supertype method (catching typos or accidental overloading)", ["@override", "compiler", "signature", "typo"], 1)],
+      [],
+      "It prints 37 (`3 * 4 = 12` plus `5 * 5 = 25`). In Java, all non-static, non-private, non-final instance "
+      "methods use dynamic dispatch at runtime based on the actual object (`Rect` or `Square`), even when referenced "
+      "through `Shape`. Adding `@Override` instructs the compiler to verify that the method actually overrides/implements "
+      "a supertype method."),
+
+    Q(D, "advanced", JAVA, "Java interface vs abstract class",
+      """interface Auditable {
+    String auditLine();
+}
+abstract class Payment {
+    protected final int cents;
+    protected Payment(int cents) { this.cents = cents; }
+    public abstract boolean charge();
+}""",
+      "When should you use a Java interface vs an abstract class, and can a single class use both?",
+      [("a class can implement multiple interfaces (class CardPayment extends Payment implements Auditable, Serializable) but can extend only one class", ["multiple interfaces", "single inheritance", "only one class", "extends", "implements"], 2),
+       ("abstract classes can hold non-static instance fields (like cents) and constructors for shared state, whereas interfaces define a capability contract without instance fields", ["instance field", "constructor", "state", "contract", "capability"], 1.5)],
+      [],
+      "Use an `interface` to define a capability contract (`Auditable`) that unrelated classes can implement—a Java "
+      "class can `implements` any number of interfaces. Use an `abstract class` (`Payment`) when closely related "
+      "subclasses need to share non-static instance fields (`cents`) and constructor initialization, since a class "
+      "can `extends` only one superclass. A class can do both: `class CardPayment extends Payment implements Auditable`."),
+
+    FB(D, "advanced", JAVA, "Missing code: implement a Java interface",
+       """interface Notifier {
+    void send(String message);
+}
+public class EmailNotifier ____ {
+    @Override
+    public void send(String message) {
+        System.out.println("Email: " + message);
+    }
+}""",
+       "Fill in the blank in the class declaration so EmailNotifier fulfills the Notifier interface.",
+       ["implements Notifier"],
+       [("Java uses implements (not extends) when a class adopts an interface contract", ["implements", "interface", "contract"], 1)],
+       [("writes extends Notifier", ["extends Notifier"], "In Java, a class uses implements for an interface and extends for a class.")],
+       "The blank is implements Notifier. In Java, a class declares that it satisfies an interface using the "
+       "`implements` keyword."),
 ]

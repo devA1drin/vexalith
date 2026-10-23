@@ -189,6 +189,8 @@ PHRASES: list[tuple[str, str]] = [
     ("bagong bagay", "new object|new instance"), ("bagong halimbawa", "new instance|new object"),
     ("magkaibang bagay", "separate instances|different objects"), ("magkahiwalay na bagay", "separate instances|separate objects"),
     ("sariling kopya", "own copy|separate copy"), ("parehong klase", "same class"),
+    ("parehong laman", "same content|same characters|equals"), ("parehong karakter", "same characters|equals"),
+    ("parehong letra", "same characters|equals"),
 ]
 
 # Grammar words without an English counterpart: dropped from the gloss.
