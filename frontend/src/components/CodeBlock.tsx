@@ -50,6 +50,7 @@ const LANG_META: Record<string, { prism: string; file: string; label: string }> 
   javascript: { prism: "javascript", file: "snippet.js", label: "javascript" },
   php: { prism: "php", file: "snippet.php", label: "php" },
   cpp: { prism: "cpp", file: "snippet.cpp", label: "c++" },
+  java: { prism: "java", file: "Main.java", label: "java" },
   html: { prism: "markup", file: "snippet.html", label: "html" },
   css: { prism: "css", file: "snippet.css", label: "css" },
   general: { prism: "plain", file: "problem.txt", label: "general" },

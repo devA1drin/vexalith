@@ -14,7 +14,7 @@ from app.models.models import Question
 from tests.conftest import auth
 
 LEVELS = ("beginner", "intermediate", "advanced")
-OOP_LANGS = ("python", "javascript", "php", "cpp", "general")
+OOP_LANGS = ("python", "javascript", "php", "cpp", "java", "general")
 
 
 def test_oop_domain_is_registered(client):
@@ -31,7 +31,7 @@ def test_oop_coverage_by_language_level_and_kind():
     for lang in OOP_LANGS:
         for level in LEVELS:
             assert by_lang_level[(lang, level)] >= 2, (lang, level)
-    for lang in ("python", "javascript", "php", "cpp"):
+    for lang in ("python", "javascript", "php", "cpp", "java"):
         blanks = [q for q in oop if q["language"] == lang and q["rubric"].get("kind") == "fill_blank"]
         assert len(blanks) >= 3, lang
 
@@ -46,7 +46,7 @@ def test_every_oop_question_has_three_distinct_hints_and_passes_rubric():
         assert fb.verdict == "correct" and fb.correctness_score >= 0.75 and not fb.misconceptions, q["title"]
 
 
-@pytest.mark.parametrize("lang", ["python", "javascript", "php", "cpp", "general", "html", "css"])
+@pytest.mark.parametrize("lang", ["python", "javascript", "php", "cpp", "java", "general", "html", "css"])
 def test_topic_oop_filter_across_all_languages_without_leakage(client, lang):
     h = auth(pid=f"oop-topic-{lang}")
     q = client.get(f"/api/questions/next?language={lang}&topic=oop", headers=h).json()

@@ -22,7 +22,7 @@ def progress(user: User = Depends(get_current_user), db: Session = Depends(get_d
 
 @router.get("/recommendations", response_model=RecommendationsOut)
 def recommendations(
-    language: Literal["python", "javascript", "php", "cpp", "html", "css", "general"] | None = Query(None),
+    language: Literal["python", "javascript", "php", "cpp", "java", "html", "css", "general"] | None = Query(None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> RecommendationsOut:

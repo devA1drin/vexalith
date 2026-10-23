@@ -54,7 +54,7 @@ export function Hero({ ctaHref, signedIn }: { ctaHref: string; signedIn: boolean
           </div>
 
           <p className="mt-8 max-w-xl text-lg leading-relaxed text-ink-300">
-            Read real Python, JavaScript, PHP, C++, HTML and CSS. Predict the output, find the bug, defend the Big-O, crack the logic puzzle.
+            Read real Python, JavaScript, PHP, C++, Java, HTML and CSS. Predict the output, find the bug, defend the Big-O, crack the logic puzzle.
             Every answer is graded twice — <span className="text-ink-50">is it right</span>, and <span className="text-ink-50">is your reasoning sound</span>.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">

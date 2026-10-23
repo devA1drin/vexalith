@@ -14,7 +14,7 @@ from app.services.learning import _question_out, get_next_question, skip_questio
 
 router = APIRouter(prefix="/questions", tags=["questions"])
 
-Language = Literal["python", "javascript", "php", "cpp", "html", "css", "general"]
+Language = Literal["python", "javascript", "php", "cpp", "java", "html", "css", "general"]
 Focus = Literal["fundamentals"]
 Difficulty = Literal["adaptive", "beginner", "intermediate", "advanced"]
 TOPIC_PATTERN = r"^[a-z_]{2,40}$"

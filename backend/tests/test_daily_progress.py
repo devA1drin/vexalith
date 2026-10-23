@@ -49,15 +49,17 @@ def test_daily_pick_is_deterministic_and_the_same_for_everyone(client):
 
 def test_daily_rotates_languages_and_skills():
     start = date(2026, 3, 1)
+    n_langs = len(daily.ROTATION)
+    assert n_langs == 8
     with SessionLocal() as db:
-        picks = [daily.pick_for(db, start + timedelta(days=i)) for i in range(28)]
-    week = [p.question.language for p in picks[:7]]
-    assert len(set(week)) == 7  # a different language every day of the week
-    assert all(picks[i].question.language != picks[i + 1].question.language for i in range(27))
-    # The same language comes back a week later on a different skill.
-    assert picks[0].question.language == picks[7].question.language
-    assert picks[0].domain.slug != picks[7].domain.slug
-    assert len({p.question.id for p in picks}) == 28
+        picks = [daily.pick_for(db, start + timedelta(days=i)) for i in range(32)]
+    cycle = [p.question.language for p in picks[:n_langs]]
+    assert len(set(cycle)) == n_langs  # a different language every day of the 8-language cycle
+    assert all(picks[i].question.language != picks[i + 1].question.language for i in range(31))
+    # The same language comes back 8 days later on a different skill.
+    assert picks[0].question.language == picks[n_langs].question.language
+    assert picks[0].domain.slug != picks[n_langs].domain.slug
+    assert len({p.question.id for p in picks}) == 32
 
 
 # ── Streaks ───────────────────────────────────────────────────────────────

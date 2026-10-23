@@ -86,7 +86,7 @@ export default async function HomePage() {
       <section>
         <Reveal className="mb-6 flex items-end justify-between gap-4 border-b border-ink-700 pb-4">
           <h2 className="font-display text-3xl font-bold tracking-tight text-ink-50">Start from your first variable.<br className="hidden sm:block" /> Finish at dynamic programming.</h2>
-          <span className="label hidden sm:block">469 questions · 3 levels · py / js / php / c++ / html / css</span>
+          <span className="label hidden sm:block">536 questions · 3 levels · py / js / php / c++ / java / html / css</span>
         </Reveal>
         <ol>
           {DOMAINS.map((d, i) => (

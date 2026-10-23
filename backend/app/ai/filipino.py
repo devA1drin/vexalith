@@ -189,6 +189,8 @@ PHRASES: list[tuple[str, str]] = [
     ("bagong bagay", "new object|new instance"), ("bagong halimbawa", "new instance|new object"),
     ("magkaibang bagay", "separate instances|different objects"), ("magkahiwalay na bagay", "separate instances|separate objects"),
     ("sariling kopya", "own copy|separate copy"), ("parehong klase", "same class"),
+    ("parehong laman", "same content|same characters|equals"), ("parehong karakter", "same characters|equals"),
+    ("parehong letra", "same characters|equals"),
 ]
 
 # Grammar words without an English counterpart: dropped from the gloss.
@@ -234,7 +236,9 @@ EN_TECH = frozenset(
     "subclass superclass base derived virtual override overrides overriding polymorphism polymorphic "
     "encapsulation encapsulated abstract interface static private protected public getter setter "
     "property properties attribute attributes methods classes objects super self prototype composition "
-    "inheritance inherited slice slicing sliced subobject blueprint hierarchy contract bound unbound callback".split()
+    "inheritance inherited slice slicing sliced subobject blueprint hierarchy contract bound unbound callback "
+    "println equals nullpointerexception arraylist hashmap hashset final primitive primitives boxed autoboxing "
+    "exception exceptions try catch finally implements extends".split()
 )
 
 _VOWELS = set("aeiou")

@@ -164,7 +164,7 @@ function RecentAttempts({ rows }: { rows: RecentAttempt[] }) {
 }
 
 const LANG_LABEL: Record<string, string> = {
-  python: "Python", javascript: "JavaScript", php: "PHP", cpp: "C++", html: "HTML", css: "CSS", general: "General",
+  python: "Python", javascript: "JavaScript", php: "PHP", cpp: "C++", java: "Java", html: "HTML", css: "CSS", general: "General",
 };
 
 function LanguageBreakdown({ rows }: { rows: LanguageProgress[] }) {

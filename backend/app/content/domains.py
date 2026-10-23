@@ -70,6 +70,7 @@ LANGUAGES = [
     {"slug": "javascript", "name": "JavaScript"},
     {"slug": "php", "name": "PHP"},
     {"slug": "cpp", "name": "C++"},
+    {"slug": "java", "name": "Java"},
     {"slug": "html", "name": "HTML"},
     {"slug": "css", "name": "CSS"},
     {"slug": "general", "name": "General"},

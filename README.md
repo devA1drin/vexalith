@@ -21,6 +21,7 @@ It checks two things: whether your answer is right, and whether your reasoning m
 - JavaScript
 - PHP
 - C++ (modern C++17: from your first `cout` to pointers, classes, the STL and smart pointers)
+- Java (modern Java 17: from your first `System.out.println` to `String` vs `.equals()`, collections, exceptions and OOP)
 - HTML
 - CSS
 - General (no code needed: logic puzzles, binary numbers, step-by-step problem solving)
@@ -33,6 +34,7 @@ It checks two things: whether your answer is right, and whether your reasoning m
 - **Edge cases and testing**: find the input that breaks the code.
 - **Code review**: suggest how to make the code better.
 - **Data structures**: pick the right container (list, dictionary, set and more).
+- **Object-Oriented Programming (OOP)**: classes, constructors, encapsulation (`private`/`public`, getters/setters), inheritance (`super`/`extends`), polymorphism, abstract classes vs interfaces, `static` vs instance members, and composition vs inheritance.
 - **Algorithmic thinking**: how fast is the code? Can it be faster?
 - **Algorithms**: classic problems such as searching and sorting.
 - **Logic problems**: true/false puzzles and reasoning.
@@ -44,7 +46,7 @@ It checks two things: whether your answer is right, and whether your reasoning m
 
 There are also plenty of **loop** drills in every language: `for`, `while`, `do-while`, nested loops, `break` and `continue`, "what does this print?" and off-by-one bugs.
 
-There are 421 questions in total, including 69 for C++, 35 fill-in-the-missing-code questions and 27 extra loop drills.
+There are 536 questions in total across 8 language tracks and 10 skill domains, including 67 for Java, 79 for C++, 58 Object-Oriented Programming questions, 56 fill-in-the-missing-code questions and 33 loop drills.
 
 ## How it works
 
@@ -53,7 +55,7 @@ There are 421 questions in total, including 69 for C++, 35 fill-in-the-missing-c
    The **Level** switch under the languages has four choices:
    - **Adaptive** (the default): the app picks the level from your results.
    - **Beginner**, **Intermediate** or **Advanced**: you only get questions at that level.
-   Your choice is remembered in your browser. Skip and Next keep your language and level.
+   You can also filter by **Topic** (such as **OOP**, **Fundamentals**, **Debugging** or **Data Structures**) using the Topic row under the level selector. Your choices are remembered as you skip or advance.
 3. **Answer in your own words.** Say what the code does and why.
    You can write in **English, Filipino (Tagalog) or Taglish** (a mix of both), for example:
    *"Nagpi-print siya ng 5 kasi copy lang ng value ang nakuha ng y."*

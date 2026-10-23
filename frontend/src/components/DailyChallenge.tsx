@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api, ApiError, type DailyMeOut, type DailyOut } from "@/lib/api";
 
 const LANG: Record<string, string> = {
-  python: "Python", javascript: "JavaScript", php: "PHP", cpp: "C++", html: "HTML", css: "CSS", general: "General",
+  python: "Python", javascript: "JavaScript", php: "PHP", cpp: "C++", java: "Java", html: "HTML", css: "CSS", general: "General",
 };
 const LEVEL_N: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3 };
 
