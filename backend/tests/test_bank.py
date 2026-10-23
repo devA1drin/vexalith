@@ -15,7 +15,7 @@ def test_every_domain_level_has_at_least_four_questions():
             assert counts[(d["slug"], level)] >= 4, (d["slug"], level)
 
 
-CORE = ["code_tracing", "debugging", "algorithmic_thinking", "edge_cases_testing", "code_review_design", "data_structures"]
+CORE = ["code_tracing", "debugging", "algorithmic_thinking", "edge_cases_testing", "code_review_design", "data_structures", "oop"]
 
 
 def test_python_and_js_cover_every_core_domain_and_level():

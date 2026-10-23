@@ -237,6 +237,7 @@ def get_next_question(
     if not all_in_lang:
         raise LookupError("No questions available — seed the database.")
     oop_id = next((d.id for d in domains.values() if d.slug == "oop"), None)
+    topic_id = next((d.id for d in domains.values() if d.slug == topic), None) if topic else None
     if language in ("html", "css") and topic != "oop" and oop_id is not None:
         # Markup tracks skip OOP during normal rotation, unless the learner explicitly filters by topic=oop.
         all_in_lang = [q for q in all_in_lang if q.domain_id != oop_id] or all_in_lang
@@ -275,7 +276,6 @@ def get_next_question(
             dm_list = [m for m in dm_list if m.domain_id == fund_id] or dm_list
             avoid_domain_ids = None
             forced_level = level or fundamentals_level(status)
-    topic_id = next((d.id for d in domains.values() if d.slug == topic), None) if topic else None
     if topic_id is not None and topic_id in available:
         dm_list = [m for m in dm_list if m.domain_id == topic_id] or dm_list
         avoid_domain_ids = None

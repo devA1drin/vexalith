@@ -77,4 +77,4 @@ def test_public_catalog_counts_match_the_seed_bank(client):
     data = client.get("/api/catalog").json()
     assert data["total"] == len(SEED_QUESTIONS)
     assert data["languages"]["cpp"] == sum(1 for q in SEED_QUESTIONS if q["language"] == "cpp")
-    assert data["kinds"]["fill_blank"] == len(QUESTIONS_MISSING_CODE)
+    assert data["kinds"]["fill_blank"] == sum(1 for q in SEED_QUESTIONS if q["rubric"].get("kind") == "fill_blank")
