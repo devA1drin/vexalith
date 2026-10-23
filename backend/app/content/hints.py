@@ -22,6 +22,7 @@ STRATEGY = {
     "edge_cases_testing": "Try the extremes: empty input, one item, zero, negative numbers, very large values and duplicates.",
     "code_review_design": "Read it as a reviewer: what could break, what is hard to read, and what is risky for security or speed?",
     "data_structures": "Ask which operation happens most often (lookup, insert, ordered walk) and which container makes it cheap.",
+    "oop": "Check which class owns the method or attribute, which object self / this / $this points to, and whether state lives on the class or the instance.",
     "algorithms": "Say the approach in one sentence, then why it always gives the right answer, then what it costs.",
     "logic_problems": "Write out the cases (or a small truth table) and check each one before you conclude.",
 }

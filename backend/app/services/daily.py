@@ -26,7 +26,7 @@ EPOCH = date(2026, 1, 1)
 ROTATION = ["python", "javascript", "cpp", "general", "php", "css", "html"]
 DOMAIN_ORDER = [
     "fundamentals", "code_tracing", "debugging", "algorithmic_thinking", "edge_cases_testing",
-    "code_review_design", "data_structures", "algorithms", "logic_problems",
+    "code_review_design", "data_structures", "oop", "algorithms", "logic_problems",
 ]
 
 

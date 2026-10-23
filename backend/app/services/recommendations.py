@@ -64,6 +64,9 @@ def get_recommendations(db: Session, user: User, *, language: str | None = None)
     pool_langs = [GENERAL] if language == GENERAL else [language, GENERAL]
     questions = db.query(Question).filter(Question.language.in_(pool_langs)).all()
     domains = {d.id: d for d in db.query(SkillDomain).all()}
+    if language in ("html", "css"):
+        oop_id = next((d.id for d in domains.values() if d.slug == "oop"), None)
+        questions = [q for q in questions if q.domain_id != oop_id] or questions
     available = {q.domain_id for q in questions}
     masteries = [m for m in ensure_user_masteries(db, user) if m.domain_id in available and m.domain_id in domains]
 

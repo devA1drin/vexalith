@@ -236,11 +236,19 @@ def get_next_question(
         all_in_lang = db.query(Question).all()
     if not all_in_lang:
         raise LookupError("No questions available — seed the database.")
+    oop_id = next((d.id for d in domains.values() if d.slug == "oop"), None)
+    if language in ("html", "css") and topic != "oop" and oop_id is not None:
+        # Markup tracks skip OOP during normal rotation, unless the learner explicitly filters by topic=oop.
+        all_in_lang = [q for q in all_in_lang if q.domain_id != oop_id] or all_in_lang
     level = difficulty if difficulty in LEVELS else None
     if level:
         # Chosen level: only questions at that level (same language pool), unless
-        # this language has none at all.
+        # this language (or requested topic) has none at that level.
         at_level = [q for q in all_in_lang if _diff(q) == level]
+        if topic_id is not None and any(q.domain_id == topic_id for q in all_in_lang):
+            at_level = [q for q in at_level if q.domain_id == topic_id] or [
+                q for q in all_in_lang if q.domain_id == topic_id
+            ]
         all_in_lang = at_level or all_in_lang
 
     # Only domains that actually have questions for this language are eligible
@@ -314,14 +322,15 @@ def get_next_question(
         return picked["obj"] if picked else None
 
     in_domain = [q for q in all_in_lang if q.domain_id == domain.id]
+    pinned = bool(forced_level or (topic_id is not None and topic_id in available))
     q = None
-    if forced_level and language != GENERAL and rng.random() < 0.75:
-        # Onboarding / focus: mostly show the chosen language, with occasional
-        # language-agnostic basics (algorithms, binary, booleans) mixed in.
+    if pinned and language != GENERAL and rng.random() < 0.8:
+        # Onboarding / focus / explicit topic: mostly show the chosen language,
+        # with occasional language-agnostic questions mixed in.
         q = choose([x for x in in_domain if x.language == language])
-    q = q or choose(in_domain) or (None if forced_level else choose(all_in_lang))
-    if q is None and forced_level:
-        # Every fundamentals question is "recent": reuse the least recent one.
+    q = q or choose(in_domain) or (None if pinned else choose(all_in_lang))
+    if q is None and pinned and in_domain:
+        # Every question in the pinned skill is "recent": reuse one from that skill.
         pool = [x for x in in_domain if x.id not in (exclude_ids or set())] or in_domain
         q = rng.choice(pool)
     if q is None:

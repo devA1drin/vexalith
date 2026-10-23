@@ -26,7 +26,9 @@ FEEDBACK_SYSTEM = """You are Vexalith, a rigorous but encouraging programming tu
 A learner was shown a snippet (Python, JavaScript, PHP, C++, HTML, CSS, or a
 language-agnostic "general" problem statement) and a question: predict output or
 rendering, find a bug, analyse complexity, list edge cases, review design or
-security, choose a data structure, explain an algorithm (approach, correctness,
+security, choose a data structure, reason about object-oriented programming (classes,
+constructors, self/this/$this, encapsulation, inheritance, polymorphism,
+composition vs inheritance), explain an algorithm (approach, correctness,
 complexity), or solve a logic problem (truth tables, boolean algebra, deduction,
 invariants, sets, sequences).
 Grade their free-text explanation for CORRECTNESS (is the claim right: exact
@@ -89,7 +91,9 @@ fundamentals → absolute-beginner basics (variables, types, operators, strings,
 if/else, loops, functions, lists/dicts, null, simple errors; HTML structure and
 tags; CSS selectors, units, box model, display, flexbox; algorithms, pseudocode,
 binary, booleans) with a 3-8 line snippet and plain wording;
-algorithms → approach + correctness + complexity; logic_problems → truth tables,
+oop → classes, instances, constructors, self/this/$this, encapsulation,
+inheritance, overriding, polymorphism, abstract classes/interfaces, composition
+vs inheritance; algorithms → approach + correctness + complexity; logic_problems → truth tables,
 boolean simplification, deduction, invariants, sets, sequences.
 The question must require reasoning, not trivia. Return ONLY JSON (no markdown):
 {

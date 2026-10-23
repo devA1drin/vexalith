@@ -40,6 +40,14 @@ DOMAINS = [
         "description": "Choose and reason about lists, sets, maps, stacks, queues, heaps, trees, and graphs.",
     },
     {
+        "slug": "oop",
+        "name": "Object-Oriented Programming",
+        "description": (
+            "Classes and objects, constructors, self / this / $this, encapsulation, inheritance, "
+            "method overriding, polymorphism, abstract classes and interfaces, and composition vs inheritance."
+        ),
+    },
+    {
         "slug": "algorithms",
         "name": "Algorithms",
         "description": (
