@@ -13,8 +13,9 @@ const DOMAINS = [
   { n: "04", name: "Edge Cases & Testing", ask: "Which input breaks it?", code: "avg = sum(xs) / len(xs)" },
   { n: "05", name: "Code Review & Design", ask: "What would you change before merge?", code: "function calc(a, b, mode, flag2) {…}" },
   { n: "06", name: "Data Structures", ask: "Pick the right shape for the data.", code: "queue.pop(0)  # cost?" },
-  { n: "07", name: "Algorithms", ask: "Approach, proof, complexity.", code: "dp[i] = max(dp[i-1], dp[i-2] + v[i])" },
-  { n: "08", name: "Logic Problems", ask: "Deduce it. Prove it.", code: "¬(A ∧ B) ≡ ¬A ∨ ¬B" },
+  { n: "07", name: "Object-Oriented Programming", ask: "Classes, inheritance, polymorphism, design.", code: "class Dog(Animal): def speak(self): …" },
+  { n: "08", name: "Algorithms", ask: "Approach, proof, complexity.", code: "dp[i] = max(dp[i-1], dp[i-2] + v[i])" },
+  { n: "09", name: "Logic Problems", ask: "Deduce it. Prove it.", code: "¬(A ∧ B) ≡ ¬A ∨ ¬B" },
 ];
 
 const CODE = [
@@ -85,7 +86,7 @@ export default async function HomePage() {
       <section>
         <Reveal className="mb-6 flex items-end justify-between gap-4 border-b border-ink-700 pb-4">
           <h2 className="font-display text-3xl font-bold tracking-tight text-ink-50">Start from your first variable.<br className="hidden sm:block" /> Finish at dynamic programming.</h2>
-          <span className="label hidden sm:block">421 questions · 3 levels · py / js / php / c++ / html / css</span>
+          <span className="label hidden sm:block">469 questions · 3 levels · py / js / php / c++ / html / css</span>
         </Reveal>
         <ol>
           {DOMAINS.map((d, i) => (
