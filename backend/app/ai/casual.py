@@ -38,7 +38,7 @@ SLANG = {
     "cuz": "because", "coz": "because", "cos": "because", "cause": "because", "bc": "because", "b/c": "because",
     "bcs": "because", "becuz": "because", "becoz": "because", "u": "you", "ur": "your", "thru": "through",
     "gonna": "going to", "wanna": "want to", "gotta": "has to", "kinda": "kind of", "w/": "with", "w/o": "without",
-    "yep": "yes", "yeah": "yes", "nope": "no", "tho": "though", "pls": "please", "prolly": "probably",
+    "n": "and", "yep": "yes", "yeah": "yes", "nope": "no", "tho": "though", "pls": "please", "prolly": "probably",
     "func": "function", "var": "variable", "obj": "object", "arr": "array", "str": "string", "num": "number",
 }
 
@@ -55,6 +55,8 @@ def canonical(text: str, *, extras: bool = True) -> str:
     t = text.lower().replace("\u2019", "'").replace("\u2018", "'")
     t = re.sub(r"\b(can't|cant|won't|wont)\b", lambda m: CONTRACTIONS[m.group(1)], t)
     t = re.sub(r"(\w)(n't)\b", r"\1 not", t)
+    # Contractions typed without the apostrophe ("didnt", "doesnt", "isnt").
+    t = re.sub(r"\b(did|does|do|is|was|are|were|has|have|had|could|should|would)nt\b", r"\1 not", t)
     t = re.sub(r"(\w)('re|'ll|'ve|'d|'m)\b", lambda m: m.group(1) + CONTRACTIONS[m.group(2)], t)
     t = re.sub(r"\b(it|that|there|what|he|she|who|here)'s\b", r"\1 is", t)
     words = []

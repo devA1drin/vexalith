@@ -77,6 +77,7 @@ def test_canonical_view_understands_everyday_wording():
     c = canonical("It doesn't change cuz it's a copy, it spits out five")
     assert "does not" in c and "because" in c and "it is" in c and "prints 5" in c
     assert "infinite loop" in canonical("the loop never ends lol")
+    assert "did not change" in canonical("strip didnt change it")
 
 
 def test_typos_match_but_unrelated_words_do_not():
