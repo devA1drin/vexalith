@@ -72,9 +72,12 @@ export function DailyChallengeCard({ signedIn, full = false }: { signedIn: boole
             </span>
             {data.kind === "fill_blank" && <span className="chip border-accent text-accent">Missing code</span>}
           </div>
-          <p className="mt-4 max-w-xl text-sm text-ink-400">
-            One question a day, the same for everyone. It changes at midnight in Manila (UTC+8), rotating through every language and skill.
-          </p>
+          {/* The daily page explains this in its "how it works" cards, so the sentence is only shown on the home page. */}
+          {!full && (
+            <p className="mt-4 max-w-xl text-sm text-ink-400">
+              One question a day, the same for everyone. It changes at midnight in Manila (UTC+8), rotating through every language and skill.
+            </p>
+          )}
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <Link href={cta} className={me?.completed ? "btn-ghost" : "btn-primary"} data-testid="daily-start">
               {me?.completed ? "Try it again" : signedIn ? "Start today's challenge" : "Sign in to play"} <span className="btn-arrow">→</span>

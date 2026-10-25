@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { DailyChallengeCard } from "@/components/DailyChallenge";
-import { PageIntro } from "@/components/PageIntro";
 
 export const metadata: Metadata = {
   title: "Daily challenge",
@@ -20,16 +19,12 @@ export default async function DailyPage() {
         </div>
         {session?.user && <Link href="/progress" className="btn-ghost">Your progress <span className="btn-arrow">→</span></Link>}
       </div>
-      <PageIntro steps={["Open today's question", "Answer it like any practice question", "Come back tomorrow to grow your streak"]}>
-        Every day there&apos;s one question that everyone gets. Press <span className="text-ink-100">Start today&apos;s challenge</span>,
-        answer it in your own words, and it counts as done for today, whatever your score. It&apos;s a nice 5-minute habit.
-      </PageIntro>
       <DailyChallengeCard signedIn={!!session?.user} full />
       <section className="grid gap-px border border-ink-700 bg-ink-700 sm:grid-cols-3" aria-label="How the daily challenge works">
         {[
           ["01", "Same for everyone", "Everyone gets the same question on the same day, so you can compare answers with friends."],
           ["02", "Resets at Manila midnight", "A new question appears at 00:00 Asia/Manila (UTC+8). The language changes every day, and the skill changes every week."],
-          ["03", "Keep the streak", "Answer it on consecutive days to grow your streak. Missing a day resets it, but your best run is kept."],
+          ["03", "Keep the streak", "Any answer counts, whatever your score. Answer on consecutive days to grow your streak; missing a day resets it, but your best run is kept."],
         ].map(([n, h, p]) => (
           <div key={n} className="bg-ink-900 p-5">
             <div className="font-mono text-sm text-ink-500">{n}</div>
