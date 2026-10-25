@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { auth } from "@/auth";
 import { DailyChallengeCard } from "@/components/DailyChallenge";
+import { PageIntro } from "@/components/PageIntro";
 
 export const metadata: Metadata = {
   title: "Daily challenge",
@@ -19,6 +20,10 @@ export default async function DailyPage() {
         </div>
         {session?.user && <Link href="/progress" className="btn-ghost">Your progress <span className="btn-arrow">→</span></Link>}
       </div>
+      <PageIntro steps={["Open today's question", "Answer it like any practice question", "Come back tomorrow to grow your streak"]}>
+        Every day there&apos;s one question that everyone gets. Press <span className="text-ink-100">Start today&apos;s challenge</span>,
+        answer it in your own words, and it counts as done for today, whatever your score. It&apos;s a nice 5-minute habit.
+      </PageIntro>
       <DailyChallengeCard signedIn={!!session?.user} full />
       <section className="grid gap-px border border-ink-700 bg-ink-700 sm:grid-cols-3" aria-label="How the daily challenge works">
         {[

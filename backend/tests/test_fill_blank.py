@@ -52,7 +52,7 @@ def test_quote_styles_and_semicolons_are_equivalent():
 def test_short_correct_answer_is_graded_correct():
     fb = grade("i<3", _ctx(_q()))
     assert fb.verdict == "correct" and fb.correctness_score >= 0.8
-    assert not any("very short" in g.description for g in fb.reasoning_gaps)
+    assert not any("a bit short" in g.description for g in fb.reasoning_gaps)
 
 
 def test_wrong_fill_is_incorrect_and_flags_the_misconception():

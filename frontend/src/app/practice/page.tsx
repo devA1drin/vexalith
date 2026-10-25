@@ -5,6 +5,8 @@ import { api, ApiError, DIFFICULTY_IDS, LANGUAGE_IDS, type Difficulty, type Feed
 import { CodeBlock } from "@/components/CodeBlock";
 import { FeedbackCard } from "@/components/FeedbackCard";
 import { HintPanel } from "@/components/HintPanel";
+import { HowToAnswer } from "@/components/HowToAnswer";
+import { PageIntro } from "@/components/PageIntro";
 
 const LANG_KEY = "vexalith_language";
 const FOCUS_KEY = "vexalith_focus";
@@ -245,6 +247,12 @@ export default function PracticePage() {
         </div>
       </div>
 
+      <PageIntro steps={["Pick a language and level", "Read the code and the question", "Answer in your own words", "Get friendly feedback, then Next"]}>
+        Each question shows a short piece of code (or a puzzle) and asks you something about it. Answer the way you would
+        explain it to a friend: casual words, English, Filipino or Taglish are all fine. Stuck? Open a hint (each one costs
+        10% of that question&apos;s score) or press Skip. Skipping never counts against you.
+      </PageIntro>
+
       <div className="-mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
         <span className="label">Level</span>
         <div className="grid grid-cols-2 gap-px border border-ink-700 bg-ink-700 sm:grid-cols-4" role="radiogroup" aria-label="Difficulty level" data-testid="level-picker">
@@ -335,11 +343,12 @@ export default function PracticePage() {
               <CodeBlock code={question.code} language={question.language} />
             </div>
             <div className="flex min-w-0 flex-col gap-4">
-              <p className="border-l-2 border-accent pl-4 text-[17px] font-medium leading-relaxed text-ink-50">{question.prompt}</p>
+              <PromptText prompt={question.prompt} />
+              <HowToAnswer question={question} />
               <HintPanel questionId={question.id} hintCount={question.hint_count ?? 0} locked={!!feedback} />
               <label className="flex flex-1 flex-col gap-2">
                 <span className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="label">{isBlank ? "The missing code (+ why, optional)" : "Your explanation"}</span>
+                  <span className="label">{isBlank ? "The missing code (+ why, optional)" : "Your answer, in your own words"}</span>
                   <span className="font-mono text-[11px] text-ink-500" data-testid="language-hint" lang="fil">English · Filipino · Taglish</span>
                 </span>
                 <textarea
@@ -350,7 +359,7 @@ export default function PracticePage() {
                   placeholder={
                     isBlank
                       ? "Type the code that replaces the highlighted ? slot.\nThen, if you like, say why it fits (English, Filipino or Taglish)."
-                      : "Answer first, then justify it.\ne.g. \"Line 5 prints … because …\"\nPuwede ring sumagot sa Filipino o Taglish."
+                      : "Start with your answer, then say why.\ne.g. \"It prints 5 because y got a copy of x.\"\nCasual words are fine. Puwede ring sumagot sa Filipino o Taglish."
                   }
                   className="input min-h-[11rem] flex-1 font-mono text-[13px] leading-6"
                 />
@@ -375,6 +384,29 @@ export default function PracticePage() {
       )}
 
       {feedback && <FeedbackCard feedback={feedback} />}
+    </div>
+  );
+}
+
+/** The question in plain words, with its "Your task:" line set apart so it's easy to spot. */
+function PromptText({ prompt }: { prompt: string }) {
+  const [question, ...rest] = prompt.split("\n\n");
+  const task = rest.join("\n\n");
+  return (
+    <div className="space-y-2 border-l-2 border-accent pl-4" data-testid="prompt">
+      <p className="text-[17px] font-medium leading-relaxed text-ink-50">{question}</p>
+      {task && (
+        <p className="text-[15px] leading-relaxed text-ink-200" data-testid="task-line">
+          {task.startsWith("Your task:") ? (
+            <>
+              <span className="font-mono text-[12px] uppercase tracking-wider text-accent">Your task · </span>
+              {task.replace(/^Your task:\s*/, "")}
+            </>
+          ) : (
+            task
+          )}
+        </p>
+      )}
     </div>
   );
 }

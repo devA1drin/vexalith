@@ -37,6 +37,8 @@ class QuestionOut(BaseModel):
     # "explain" (free-text reasoning) or "fill_blank" (supply the code for the ____ blank).
     kind: str = "explain"
     hint_count: int = 0
+    # Plain-language "how to answer" guide: {task, look_for, good_answer}.
+    guide: dict[str, str] | None = None
 
 
 class HintsOut(BaseModel):

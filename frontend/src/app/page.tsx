@@ -8,8 +8,8 @@ import { DailyChallengeCard } from "@/components/DailyChallenge";
 const DOMAINS = [
   { n: "00", name: "Fundamentals", ask: "Start from zero. Every language.", code: "x = 5; y = x; x = 10  # y?" },
   { n: "01", name: "Code Tracing", ask: "What does this print, line by line?", code: "print(f(1)); print(f(2))" },
-  { n: "02", name: "Debugging", ask: "Find the root cause, not the symptom.", code: "for (var i=0;i<3;i++) setTimeout(()=>log(i))" },
-  { n: "03", name: "Algorithmic Thinking", ask: "Defend the Big-O. Propose better.", code: "if x in big_list:  # O(?)" },
+  { n: "02", name: "Debugging", ask: "What is the real cause of the bug?", code: "for (var i=0;i<3;i++) setTimeout(()=>log(i))" },
+  { n: "03", name: "Algorithmic Thinking", ask: "How slow is it? Explain, then suggest a faster way.", code: "if x in big_list:  # O(?)" },
   { n: "04", name: "Edge Cases & Testing", ask: "Which input breaks it?", code: "avg = sum(xs) / len(xs)" },
   { n: "05", name: "Code Review & Design", ask: "What would you change before merge?", code: "function calc(a, b, mode, flag2) {…}" },
   { n: "06", name: "Data Structures", ask: "Pick the right shape for the data.", code: "queue.pop(0)  # cost?" },

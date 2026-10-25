@@ -1,6 +1,7 @@
 """Aggregated seed bank (every question gets progressive hints, see hints.py)."""
 
 from app.content.hints import with_hints
+from app.content.humanize import with_human_prompts
 
 from app.content.questions_algorithms import QUESTIONS_ALGORITHMS
 from app.content.questions_cpp import QUESTIONS_CPP
@@ -32,7 +33,7 @@ FUNDAMENTALS_QUESTIONS = (
     + QUESTIONS_FUND_GENERAL
 )
 
-SEED_QUESTIONS = with_hints(
+SEED_QUESTIONS = with_human_prompts(with_hints(
     FUNDAMENTALS_QUESTIONS
     + QUESTIONS_PART1
     + QUESTIONS_PART2
@@ -46,4 +47,4 @@ SEED_QUESTIONS = with_hints(
     + QUESTIONS_LOOPS
     + QUESTIONS_MISSING_CODE
     + QUESTIONS_OOP
-)
+))

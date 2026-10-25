@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import re
 
+from app.ai.casual import canonical, fuzzy_hit, tokens
 from app.ai.filipino import gloss as filipino_gloss
 from app.ai.provider import AIProvider, QuestionContext
 from app.schemas.schemas import FeedbackPayload, Finding, ReasoningGap
@@ -94,6 +95,23 @@ def fill_blank_hit(answer: str, accepted: list[str]) -> str | None:
     return None
 
 
+def tutor_summary(verdict: str, hit: int, total: int, mixup: bool, fill_blank: bool) -> str:
+    """A short, warm summary in the voice of a human tutor (no scoring jargon)."""
+    points = f"You got {hit} of the {total} key points." if total else ""
+    if verdict == "correct":
+        head = "Nice work, that's right!" if not fill_blank else "Yes, that code fits the blank!"
+        tail = "Have a quick look at the model answer to see if there's anything you'd add."
+    elif verdict == "partially_correct":
+        head = "You're on the right track."
+        tail = "Read the notes below to see what's missing, then try one more."
+    else:
+        head = "Not quite yet, but that's how learning works."
+        tail = "Check the model answer below, then give the next one a go."
+    if mixup:
+        tail = "It looks like you hit a common mix-up, so I explained it below. " + tail
+    return " ".join(x for x in (head, points, tail) if x)
+
+
 def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
     rubric = question.rubric or {}
     concepts = rubric.get("concepts") or []
@@ -108,9 +126,20 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
     views = [(norm, compact)]
     if g.language != "en":
         views += [(_normalize(g.primary), _despace(g.primary)), (_normalize(g.full), _despace(g.full))]
+    strict_views = views[:2]
+    # Casual human wording ("doesn't", "cuz", "spits out five") is matched through a
+    # canonical English view, and small typos ("varible") through a fuzzy word match.
+    # Misconceptions are still only checked on what the learner literally wrote.
+    casual_texts = [canonical(answer)] + ([canonical(g.full)] if g.language != "en" else [])
+    views += [(_normalize(t), _despace(t)) for t in casual_texts]
+    token_views = [tokens(answer)] + [tokens(t) for t in casual_texts]
 
     def said(keyword: str, *, strict: bool = False) -> bool:
-        return any(keyword_hit(n, c, keyword) for n, c in (views[:2] if strict else views))
+        if strict:
+            return any(keyword_hit(n, c, keyword) for n, c in strict_views)
+        if any(keyword_hit(n, c, keyword) for n, c in views):
+            return True
+        return any(fuzzy_hit(t, keyword) for t in token_views)
 
     hit_labels: list[str] = []
     missed_labels: list[str] = []
@@ -149,13 +178,13 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
                     break
 
     words = len(answer.split())
-    marker_text = answer
+    marker_text = canonical(answer, extras=False)
     if g.language != "en":
         # Tagalog needs extra grammar words ("ang", "ng", "mga"); count the gloss
         # words (plus ~30% for the English articles a translation would add) so length is judged fairly.
         gloss_words = sum(1 for t in g.primary.split() if any(ch.isalnum() for ch in t))
         words = min(words, round(gloss_words * 1.3))
-        marker_text = g.primary
+        marker_text = canonical(g.primary, extras=False)
     length_score = min(1.0, words / 60.0)
     markers = len((GLOSS_MARKERS if g.language != "en" else REASONING_MARKERS).findall(marker_text))
     marker_score = min(1.0, markers / 5.0)
@@ -177,67 +206,63 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
         # The answer is code, so don't nag about prose length or "because" markers.
         if blank_hit is None:
             gaps.append(ReasoningGap(
-                description="The code you typed doesn't fit the blank yet.",
-                how_to_improve="Trace the lines around the ? slot: what must be there for the code to do what the prompt says?",
+                description="Not quite: the code you typed doesn't fit the blank yet.",
+                how_to_improve="Read the lines just before and after the ? slot and ask yourself what has to be there for the code to work.",
             ))
         for label in missed_labels[1 if blank_hit is None else 0:][:2]:
-            gaps.append(ReasoningGap(description=f"Why it works: {label}.", how_to_improve="Add one sentence on why your code fits."))
+            gaps.append(ReasoningGap(description=f"Bonus point you could add: {label}.", how_to_improve="One short sentence on why your code fits is enough."))
     else:
         if words < 20:
             gaps.append(ReasoningGap(
-                description="The explanation is very short.",
-                how_to_improve="State your answer, then justify it step by step (what the code does on each relevant line).",
+                description="Your answer is a bit short, so I can't see all of your thinking yet.",
+                how_to_improve="Say your answer first, then walk me through it: what happens on each line that matters?",
             ))
         if marker_score < 0.4:
             gaps.append(ReasoningGap(
-                description="Little explicit causal reasoning (because / so / therefore / when ...).",
-                how_to_improve="Connect each claim to the code: 'X happens because line N does Y'.",
+                description="You told me what happens, but not much about why.",
+                how_to_improve="Link it to the code with a 'because', like: 'it prints 3 because line 2 adds 1 each time'.",
             ))
         for label in missed_labels[:3]:
-            gaps.append(ReasoningGap(description=f"Not addressed: {label}.", how_to_improve=f"Explain {label} explicitly."))
+            gaps.append(ReasoningGap(description=f"You didn't mention this yet: {label}.", how_to_improve="Add a sentence about it in your own words."))
 
     suggestions: list[str] = []
     if findings:
-        suggestions.append("Re-trace the code line by line; your answer matches a common misconception.")
+        suggestions.append("This is a really common mix-up, so don't worry. Go through the code again one line at a time and you'll spot it.")
     if missed_labels and not fill_blank:
-        suggestions.append("Cover the missing points: " + "; ".join(missed_labels[:3]) + ".")
+        suggestions.append("Next time, try to also cover: " + "; ".join(missed_labels[:3]) + ".")
     if fill_blank:
         if blank_hit is None and accepted:
             suggestions.append(
-                "Read the lines around the blank: what value or statement must be there for the code to do what "
-                "the prompt says? One accepted answer: " + accepted[0]
+                "Look at the lines around the blank and think about what they need from it. "
+                "Here's one answer that works: " + accepted[0]
             )
         else:
-            suggestions.append("Nice fill. Now say in one sentence why that code is the one that fits.")
+            suggestions.append("Nice, that code fits! If you want the full score, add one sentence on why it works.")
     elif question.domain_slug == "fundamentals":
         suggestions.append(
-            "Beginner tip: say what each line does in plain words, write down the value of every variable "
-            "after each step, then compare with the model answer below."
+            "Tip: say what each line does in plain words and jot down each variable's value as you go. "
+            "Then compare with the model answer below."
         )
     elif question.domain_slug == "algorithmic_thinking":
-        suggestions.append("Justify Big-O by counting how many times the dominant operation runs.")
+        suggestions.append("To back up your Big-O, count how many times the busiest line runs as the input grows.")
     elif question.domain_slug == "edge_cases_testing":
-        suggestions.append("For each edge case, state the input, the expected result, and the actual result.")
+        suggestions.append("For each tricky input, say what you'd expect, what actually happens, and how to fix it.")
     elif question.domain_slug == "debugging":
-        suggestions.append("Name the root cause, show a failing input, and give the corrected code.")
+        suggestions.append("Point to the line that causes the bug, give an input that shows it, then share the fixed code.")
     elif question.domain_slug == "oop":
         suggestions.append(
-            "Trace which object self / this / $this refers to, which class defines the method, and whether the attribute lives on the class or the instance."
+            "Ask yourself: which object is self / this / $this right now, which class has this method, and does the value belong to the class or to one object?"
         )
     if not suggestions:
-        suggestions.append("Great work — try explaining an alternative approach and its tradeoffs.")
+        suggestions.append("Great work! For an extra challenge, think of another way to solve it and what you'd gain or lose.")
 
-    explanation = (
-        f"Rubric match: {len(hit_labels)}/{len(concepts)} key points "
-        f"(correctness {correctness:.0%}); reasoning quality {reasoning:.0%}"
-        + (f"; {len(findings)} misconception(s) detected." if findings else ".")
-    )
+    explanation = tutor_summary(verdict, len(hit_labels), len(concepts), bool(findings), fill_blank)
     return FeedbackPayload(
         verdict=verdict,
         correctness_score=correctness,
         reasoning_score=reasoning,
         overall_score=overall,
-        strengths=[f"Covered: {h}" for h in hit_labels],
+        strengths=[f"You explained: {h}" for h in hit_labels],
         missed_concepts=missed_labels,
         misconceptions=findings,
         reasoning_gaps=gaps[:4],

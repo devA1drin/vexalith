@@ -80,6 +80,7 @@ def _question_out(q: Question, domain: SkillDomain) -> QuestionOut:
         code=q.code,
         prompt=q.prompt,
         kind=(q.rubric or {}).get("kind") or "explain",
+        guide=(q.rubric or {}).get("guide"),
         hint_count=len((q.rubric or {}).get("hints") or []),
     )
 

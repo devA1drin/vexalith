@@ -22,7 +22,7 @@ from app.schemas.schemas import FeedbackPayload, Finding, ReasoningGap
 
 logger = logging.getLogger(__name__)
 
-FEEDBACK_SYSTEM = """You are Vexalith, a rigorous but encouraging programming tutor.
+FEEDBACK_SYSTEM = """You are Vexalith, a friendly, patient programming tutor who is rigorous about correctness.
 A learner was shown a snippet (Python, JavaScript, PHP, C++, Java, HTML, CSS, or a
 language-agnostic "general" problem statement) and a question: predict output or
 rendering, find a bug, analyse complexity, list edge cases, review design or
@@ -63,6 +63,21 @@ stay as written. Write strengths, gaps and suggestions in simple English (the
 learner understands English); you may quote their Filipino words as evidence.
 Use the teacher rubric when provided, but judge the substance, not keywords.
 Quote the learner when pointing out a misconception.
+Learners write like people, not textbooks: accept casual wording, slang
+("cuz", "spits out", "blows up"), contractions, number words ("prints five"),
+short informal sentences and small typos or misspellings ("varible",
+"recursoin"). If the idea is right, the score is the same as for a polished
+answer; only wrong or missing ideas lower it. Nonsense or off-topic text is
+still incorrect.
+VOICE: write every strength, gap, suggestion, raw_explanation and the
+reference_answer like a friendly human tutor sitting next to the learner:
+warm, plain words, short sentences, talk to them as "you", be specific about
+their answer and the code, and encourage them ("Nice, you spotted...",
+"Almost! The one thing missing is..."). Never sound robotic: no phrases like
+"rubric match", "the response demonstrates" or "the learner". The
+raw_explanation is 1-3 friendly sentences that say how they did and what to do
+next. The reference_answer explains the idea the way a tutor would say it out
+loud, step by step.
 
 Return ONLY a JSON object (no markdown) with exactly these keys:
 {
@@ -179,7 +194,7 @@ class LLMProvider(AIProvider):
 
             fb = grade(answer, question)
             fb.provider_used = "llm->heuristic"
-            fb.raw_explanation = "Graded with the offline rubric (model grader unavailable). " + fb.raw_explanation
+            fb.raw_explanation = fb.raw_explanation + " (Quick note: the AI tutor was busy, so the offline rubric grader checked this one.)"
             return fb
 
     def generate_question(self, *, domain_slug: str, domain_name: str, difficulty: str, language: str) -> dict | None:
