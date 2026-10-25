@@ -10,6 +10,7 @@ User ──< UserFeedback            (app feedback submitted by signed-in users)
 User ──< HintUsage >── Question  (progressive hints revealed while answering)
 User ──< DailyCompletion >── Question (daily challenge done, one row per Manila day)
 Response ── Feedback (1:1)       (AI feedback on an answer)
+User ──< ExerciseAttempt          (browser coding exercise runs; code never runs on the server)
 AppMeta                          (schema version for safe re-seeding)
 """
 
@@ -221,6 +222,21 @@ class UserFeedback(Base):
     )
 
     user: Mapped[User] = relationship()
+
+
+class ExerciseAttempt(Base):
+    """A run of the hidden + visible tests for a browser coding exercise (code runs client-side only)."""
+
+    __tablename__ = "exercise_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    slug: Mapped[str] = mapped_column(String(64), index=True)
+    language: Mapped[str] = mapped_column(String(32))
+    passed: Mapped[int] = mapped_column(Integer, default=0)
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    code: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
 
 
 class AppMeta(Base):
