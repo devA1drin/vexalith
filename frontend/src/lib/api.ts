@@ -48,7 +48,7 @@ export type Question = {
   /** "fill_blank": the snippet has a ____ blank and the learner supplies the missing code. */
   kind?: "explain" | "fill_blank";
   hint_count?: number;
-  guide?: { task: string; look_for: string; good_answer: string } | null;
+  guide?: { look_for: string; good_answer?: string | null } | null;
 };
 
 export type HintsOut = { question_id: number; revealed: string[]; hint_count: number; penalty_per_hint: number; penalty: number };

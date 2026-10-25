@@ -48,21 +48,30 @@ GLOSSARY = [
     ("time complexity", "time complexity (how the running time grows as the input gets bigger)"),
 ]
 
-# "Your task" line per skill: what to do + what a good answer contains.
+# "Your task" line: the one place that says what to answer. It depends on what
+# the question asks (output, "why", "which") and on its skill, so it isn't the
+# same boilerplate on every question. The "How to answer" box only adds what to
+# look for, so the two never repeat each other.
 TASKS = {
-    "fundamentals": "Your task: in 2-4 short sentences, give your answer first, then explain it line by line in plain words.",
-    "code_tracing": "Your task: write the exact output (or result) first, then explain in 2-4 sentences why, following the code line by line.",
-    "debugging": "Your task: in 2-4 sentences, name the bug, point to the line that causes it, say why it's wrong, and show the fixed code.",
+    "fundamentals": "Your task: give your answer first, then explain it line by line in plain words.",
+    "code_tracing": "Your task: work out the result first, then explain why, following the code line by line.",
+    "debugging": "Your task: name the bug, point to the line that causes it, say why it's wrong, and show the fixed code.",
     "algorithmic_thinking": "Your task: give the Big-O, explain how you counted the steps, and say how it could be made faster if you can.",
     "edge_cases_testing": "Your task: list the inputs that break it (empty, zero, negative, huge, duplicates...). For each one, say what goes wrong and how to fix it.",
     "code_review_design": "Your task: name the main problem, explain why it matters (bugs, safety, speed or readability), and say how you would change the code.",
     "data_structures": "Your task: name the structure you'd use, say which operation it makes fast, and compare it with the current choice.",
-    "oop": "Your task: in 2-4 sentences, answer the question, then explain which object or class is doing the work and why.",
+    "oop": "Your task: answer the question, then explain which object or class is doing the work and why.",
     "algorithms": "Your task: describe the idea in plain words, explain why it always gives the right answer, and say how fast it is.",
     "logic_problems": "Your task: give your answer, then show the steps or cases that prove it.",
 }
-MARKUP_TASK = "Your task: in 2-4 sentences, say what the browser shows or does, and which tag, attribute or rule causes it."
+OUTPUT_TASK = "Your task: write the exact output first, then say why, pointing at the lines that cause it."
+WHY_TASK = "Your task: explain the cause in your own words and point to the line that is responsible."
+WHICH_TASK = "Your task: name your choice first, then give the reason for it."
+MARKUP_TASK = "Your task: say what the browser shows or does, and which tag, attribute or rule causes it."
 FILL_TASK = "Your task: type only the code that goes in the ? slot. If you like, add one short sentence on why it fits."
+# Skills whose own task line is already specific (they keep it even for "why"/"which" questions).
+SPECIFIC_DOMAINS = {"debugging", "algorithmic_thinking", "edge_cases_testing", "code_review_design", "data_structures", "oop", "algorithms", "logic_problems"}
+_ASKS_OUTPUT = re.compile(r"\b(print|prints|printed|output|outputs|show in the console|logged|echo(?:es)?)\b", re.I)
 
 # What to look for while reading the code (the "How to answer" guide).
 LOOK_FOR = {
@@ -80,10 +89,9 @@ LOOK_FOR = {
 MARKUP_LOOK = "Picture the page in the browser: which elements exist and which CSS rule wins."
 FILL_LOOK = "Read the lines just before and after the ? slot. What must be there for the code to do its job?"
 
-GOOD_ANSWER = {
-    "explain": "A good answer states the result first, then gives the reason. Casual wording is fine, and so are English, Filipino or Taglish.",
-    "fill_blank": "A good answer is just the right code, e.g. i += 1. Spacing, quote style and a trailing ; don't matter.",
-}
+# Only fill-in questions need extra "what counts" guidance; for explain questions
+# the task line already says what a good answer contains.
+FILL_GOOD_ANSWER = "Just the right code counts, e.g. i += 1. Spacing, quote style and a trailing ; don't matter."
 
 
 def _sentences(text: str) -> list[str]:
@@ -113,23 +121,30 @@ def task_line(q: dict) -> str:
     if rubric.get("kind") == "fill_blank":
         return FILL_TASK
     domain = q.get("domain", "")
+    question = plain_prompt(rubric.get("original_prompt") or q.get("prompt", "")).split("\n\n")[0]
     if q.get("language") in ("html", "css") and domain in ("fundamentals", "code_tracing"):
         return MARKUP_TASK
+    if domain in ("fundamentals", "code_tracing", "data_structures", "algorithms") and _ASKS_OUTPUT.search(question):
+        return OUTPUT_TASK
+    if domain not in SPECIFIC_DOMAINS:
+        if question.startswith("Why"):
+            return WHY_TASK
+        if question.startswith("Which"):
+            return WHICH_TASK
     return TASKS.get(domain, TASKS["code_tracing"])
 
 
 def guide(q: dict) -> dict:
     rubric = q.get("rubric") or {}
-    kind = "fill_blank" if rubric.get("kind") == "fill_blank" else "explain"
+    fill = rubric.get("kind") == "fill_blank"
     domain = q.get("domain", "")
-    if kind == "fill_blank":
+    if fill:
         look = FILL_LOOK
     elif q.get("language") in ("html", "css") and domain in ("fundamentals", "code_tracing"):
         look = MARKUP_LOOK
     else:
         look = LOOK_FOR.get(domain, LOOK_FOR["code_tracing"])
-    task = task_line(q).removeprefix("Your task: ")
-    return {"task": task[:1].upper() + task[1:], "look_for": look, "good_answer": GOOD_ANSWER[kind]}
+    return {"look_for": look, "good_answer": FILL_GOOD_ANSWER if fill else None}
 
 
 def humanize(q: dict) -> dict:

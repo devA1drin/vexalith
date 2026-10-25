@@ -103,7 +103,7 @@ def tutor_summary(verdict: str, hit: int, total: int, mixup: bool, fill_blank: b
         tail = "Have a quick look at the model answer to see if there's anything you'd add."
     elif verdict == "partially_correct":
         head = "You're on the right track."
-        tail = "Read the notes below to see what's missing, then try one more."
+        tail = "The unticked points above are what's still missing."
     else:
         head = "Not quite yet, but that's how learning works."
         tail = "Check the model answer below, then give the next one a go."
@@ -209,8 +209,7 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
                 description="Not quite: the code you typed doesn't fit the blank yet.",
                 how_to_improve="Read the lines just before and after the ? slot and ask yourself what has to be there for the code to work.",
             ))
-        for label in missed_labels[1 if blank_hit is None else 0:][:2]:
-            gaps.append(ReasoningGap(description=f"Bonus point you could add: {label}.", how_to_improve="One short sentence on why your code fits is enough."))
+        # Missed points are already unticked in the "full answer covers" checklist.
     else:
         if words < 20:
             gaps.append(ReasoningGap(
@@ -222,14 +221,10 @@ def grade(answer: str, question: QuestionContext) -> FeedbackPayload:
                 description="You told me what happens, but not much about why.",
                 how_to_improve="Link it to the code with a 'because', like: 'it prints 3 because line 2 adds 1 each time'.",
             ))
-        for label in missed_labels[:3]:
-            gaps.append(ReasoningGap(description=f"You didn't mention this yet: {label}.", how_to_improve="Add a sentence about it in your own words."))
 
     suggestions: list[str] = []
     if findings:
         suggestions.append("This is a really common mix-up, so don't worry. Go through the code again one line at a time and you'll spot it.")
-    if missed_labels and not fill_blank:
-        suggestions.append("Next time, try to also cover: " + "; ".join(missed_labels[:3]) + ".")
     if fill_blank:
         if blank_hit is None and accepted:
             suggestions.append(

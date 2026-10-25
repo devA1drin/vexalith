@@ -20,8 +20,6 @@ export default function ProgressPage() {
     });
   }, []);
 
-  const weakest = data?.domains.length ? [...data.domains].sort((a, b) => a.mastery - b.mastery)[0] : null;
-
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-700 pb-5">
@@ -32,9 +30,8 @@ export default function ProgressPage() {
         <Link href="/practice" className="btn-primary">Continue <span className="btn-arrow">→</span></Link>
       </div>
       <PageIntro>
-        This page shows how you&apos;re doing. <span className="text-ink-100">Mastery</span> (0-100) goes up when you answer a skill
-        well and down a little when you miss, so the lowest bar is the best thing to practise next. Hints lower a
-        question&apos;s score a bit; skips don&apos;t.
+        <span className="text-ink-100">Mastery</span> (0-100) goes up when you answer a skill well and down a little when you
+        miss, so the lowest bar is the best thing to practise next.
       </PageIntro>
       {error && <p role="alert" className="border-l-2 border-signal pl-3 text-sm text-signal-soft">{error}</p>}
       {!data && !error && <div className="card h-48 animate-pulse" />}
@@ -52,41 +49,18 @@ export default function ProgressPage() {
       )}
       {data && (
         <>
-          <div className="grid grid-cols-2 border-l border-t border-ink-700 sm:grid-cols-4" data-testid="progress-stats">
+          <div className="grid grid-cols-2 border-l border-t border-ink-700 sm:grid-cols-3" data-testid="progress-stats">
             <Stat label="Solved" value={data.questions_solved ?? 0} note={`of ${data.questions_answered ?? 0} questions tried`} i={0} />
             <Stat label="Accuracy" value={Math.round((data.accuracy ?? 0) * 100)} suffix="%" note={`${data.correct_answers ?? 0} of ${data.total_responses} answers right`} i={1} />
             <Stat label="Avg score" value={Math.round((data.average_score ?? 0) * 100)} note="out of 100, hints included" i={2} />
             <StreakStat current={data.current_streak ?? 0} best={data.best_streak ?? 0} today={!!data.daily_done_today} i={3} />
-            <Stat label="Answers" value={data.total_responses} i={4} />
-            <Stat label="Skipped" value={data.total_skips} i={5} />
-            <Stat label="Hints used" value={data.hints_used ?? 0} i={6} />
-            <Stat label="Avg mastery" value={Math.round(data.average_mastery * 100)} suffix="%" note={weakest ? `lowest: ${weakest.domain_name}` : undefined} i={7} />
+            <Stat label="Skipped" value={data.total_skips} note="skips never lower a score" i={4} />
+            <Stat label="Hints used" value={data.hints_used ?? 0} i={5} />
           </div>
           <TrendChart days={data.history ?? []} improvement={data.improvement} />
           {data.fundamentals && <FundamentalsPanel s={data.fundamentals} />}
           <Recommendations />
           <MasteryChart domains={data.domains} />
-          <div className="card overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <caption className="sr-only">Mastery and attempts per skill</caption>
-              <thead>
-                <tr className="border-b border-ink-700">
-                  <th className="label px-5 py-3 font-normal">Skill</th>
-                  <th className="label px-5 py-3 text-right font-normal">Mastery</th>
-                  <th className="label px-5 py-3 text-right font-normal">Attempts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.domains.map((d) => (
-                  <tr key={d.domain_slug} className="border-b border-ink-800 last:border-0">
-                    <td className="px-5 py-3 text-ink-100">{d.domain_name}</td>
-                    <td className="px-5 py-3 text-right font-mono text-ink-50">{Math.round(d.mastery * 100)}</td>
-                    <td className="px-5 py-3 text-right font-mono text-ink-300">{d.attempts}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
           <LanguageBreakdown rows={data.languages ?? []} />
           <RecentAttempts rows={data.recent ?? []} />
         </>

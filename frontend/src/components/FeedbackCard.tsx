@@ -53,6 +53,13 @@ export function FeedbackCard({ feedback }: { feedback: FeedbackPayload }) {
   const overall = Math.round(feedback.overall_score * 100);
   let d = 500;
   const next = () => (d += 90);
+  // When the checklist is shown, it already says which points were covered and which are missing,
+  // so notes that just restate a checklist point are left out.
+  const points = feedback.key_points ?? [];
+  const inChecklist = (text: string) => points.length > 1 && points.some((p) => text.toLowerCase().includes(p.toLowerCase()));
+  const strengths = feedback.strengths.filter((s) => !inChecklist(s));
+  const gaps = feedback.reasoning_gaps.filter((g) => !inChecklist(g.description));
+  const suggestions = feedback.suggestions.filter((s) => !inChecklist(s));
   return (
     <section className="card q-enter space-y-6 p-6" data-testid="feedback-card" aria-live="polite">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-700 pb-5">
@@ -112,10 +119,10 @@ export function FeedbackCard({ feedback }: { feedback: FeedbackPayload }) {
 
       {feedback.raw_explanation && <p className="rise text-[15px] leading-relaxed text-ink-200" style={{ ["--rd" as string]: "400ms" }}>{feedback.raw_explanation}</p>}
 
-      {feedback.strengths.length > 0 && (
-        <Block title={t.heldUp} tone="border-accent text-accent" delay={next()}><List items={feedback.strengths} /></Block>
+      {strengths.length > 0 && (
+        <Block title={t.heldUp} tone="border-accent text-accent" delay={next()}><List items={strengths} /></Block>
       )}
-      {feedback.missed_concepts.length > 0 && !feedback.missed_concepts.every((m) => (feedback.key_points ?? []).includes(m)) && (
+      {feedback.missed_concepts.length > 0 && !feedback.missed_concepts.every((m) => points.includes(m)) && (
         <Block title={t.missed} tone="border-ink-300 text-ink-200" delay={next()}><List items={feedback.missed_concepts} /></Block>
       )}
       {feedback.misconceptions.length > 0 && (
@@ -131,10 +138,10 @@ export function FeedbackCard({ feedback }: { feedback: FeedbackPayload }) {
           </ul>
         </Block>
       )}
-      {feedback.reasoning_gaps.length > 0 && (
+      {gaps.length > 0 && (
         <Block title={t.gaps} tone="border-ink-500 text-ink-300" delay={next()}>
           <ul className="space-y-3">
-            {feedback.reasoning_gaps.map((g, i) => (
+            {gaps.map((g, i) => (
               <li key={i}>
                 <p className="text-sm text-ink-100">{g.description}</p>
                 <p className="mt-0.5 text-sm text-accent-soft">→ {g.how_to_improve}</p>
@@ -143,8 +150,8 @@ export function FeedbackCard({ feedback }: { feedback: FeedbackPayload }) {
           </ul>
         </Block>
       )}
-      {feedback.suggestions.length > 0 && (
-        <Block title={t.nextSteps} tone="border-ink-500 text-ink-300" delay={next()}><List items={feedback.suggestions} /></Block>
+      {suggestions.length > 0 && (
+        <Block title={t.nextSteps} tone="border-ink-500 text-ink-300" delay={next()}><List items={suggestions} /></Block>
       )}
       {feedback.reference_answer && (
         <details className="group border border-ink-700 p-4" open={feedback.verdict !== "correct"} data-testid="model-answer">
