@@ -105,6 +105,17 @@ Topics: loops, strings, conditions, lists and sets, dictionaries/maps, hash maps
 
 When a test fails you see what was expected, what your code returned and a short tip. A compile error is shown once, with the line number.
 
+**Stuck? Use "How to solve it"** (under the example tests; on a phone it sits above the editor):
+
+- **Hints**: up to 3, shown one at a time. The first is a nudge, the second the key idea, the third the technique to use.
+  Exercises aren't scored, so hints are free.
+- **Explanation**: opens by itself when you pass every test. It explains the problem in general terms, not line by line:
+  *the idea* behind it, *the approach* in a few steps, *what to watch out for* (common mistakes and edge cases) and
+  *the pattern* you can reuse on similar problems, plus a short reference solution to compare with yours.
+- **Show solution**: opens the explanation and reference solution early. After you've run your code it opens straight away;
+  before your first try it asks *"Are you sure?"* first. If you see the solution before passing, the exercise shows as
+  **Solved with help**.
+
 **Your code runs in your own browser, never on our server.** It's free for everyone: no paid services and no keys.
 Each language's engine is downloaded from a public CDN only when you first pick that language, and your browser keeps it for next time:
 
@@ -265,7 +276,7 @@ pytest -q
 ```
 vexalith/
 ├── backend/            The server (Python, FastAPI)
-│   ├── app/content/    All the questions and their answer keys
+│   ├── app/content/    All the questions and their answer keys, the coding exercises and their hints/explanations
 │   ├── app/services/   Picks your next question and tracks your progress
 │   ├── app/ai/         The graders (offline and AI model)
 │   └── tests/          Automatic tests
