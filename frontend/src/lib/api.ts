@@ -142,6 +142,51 @@ export type PublicFeedback = {
   created_at: string;
 };
 
+export type CodeLanguage = "python" | "javascript" | "cpp" | "java" | "php";
+export type ExerciseSummary = {
+  slug: string;
+  title: string;
+  language: CodeLanguage;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  topic: string;
+  tests: number;
+  best_passed: number;
+  solved: boolean;
+  attempted: boolean;
+  solved_with_help?: boolean;
+};
+export type ExerciseList = { exercises: ExerciseSummary[]; runnable_languages: CodeLanguage[]; coming_soon: string[] };
+/** "How to solve it": hints shown so far, and (once you pass or reveal it) the explanation and solution. */
+export type ExerciseHelp = {
+  hint_count: number;
+  hints: string[];
+  solution_revealed: boolean;
+  solved_with_help: boolean;
+  explanation: { idea: string; approach: string[]; pitfalls: string[]; pattern: string } | null;
+  solution: string | null;
+};
+export type ExerciseDetail = Omit<ExerciseSummary, "tests"> & {
+  help: ExerciseHelp;
+  description: string;
+  function: string;
+  starter: string;
+  signature: { params: string[]; returns: string } | null;
+  timeout_ms: number;
+  visible_tests: { args: unknown[]; expected: unknown }[];
+  hidden_tests: { args: unknown[] }[];
+};
+export type SubmitCheck = { index: number; visible: boolean; passed: boolean; expected?: unknown };
+export type SubmitOut = {
+  slug: string;
+  passed: number;
+  total: number;
+  solved: boolean;
+  first_solve: boolean;
+  checks: SubmitCheck[];
+  message: string;
+  help: ExerciseHelp;
+};
+
 export class ApiError extends Error {
   constructor(message: string, public status: number) {
     super(message);
@@ -199,4 +244,11 @@ export const api = {
     request<MyFeedback>("/feedback", { method: "POST", body: JSON.stringify(body) }),
   myFeedback: () => request<MyFeedback[]>("/feedback/mine"),
   recentFeedback: () => request<PublicFeedback[]>("/feedback/recent"),
+  exercises: () => request<ExerciseList>("/exercises"),
+  exercise: (slug: string) => request<ExerciseDetail>(`/exercises/${encodeURIComponent(slug)}`),
+  submitExercise: (slug: string, code: string, results: { output: string | null; error: string | null }[]) =>
+    request<SubmitOut>(`/exercises/${encodeURIComponent(slug)}/submit`, { method: "POST", body: JSON.stringify({ code, results }) }),
+  exerciseHint: (slug: string) => request<ExerciseHelp>(`/exercises/${encodeURIComponent(slug)}/hints`, { method: "POST", body: "{}" }),
+  revealSolution: (slug: string, confirm: boolean) =>
+    request<ExerciseHelp>(`/exercises/${encodeURIComponent(slug)}/solution`, { method: "POST", body: JSON.stringify({ confirm }) }),
 };

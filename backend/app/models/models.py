@@ -10,6 +10,7 @@ User ──< UserFeedback            (app feedback submitted by signed-in users)
 User ──< HintUsage >── Question  (progressive hints revealed while answering)
 User ──< DailyCompletion >── Question (daily challenge done, one row per Manila day)
 Response ── Feedback (1:1)       (AI feedback on an answer)
+User ──< ExerciseAttempt          (browser coding exercise runs; code never runs on the server)
 AppMeta                          (schema version for safe re-seeding)
 """
 
@@ -221,6 +222,40 @@ class UserFeedback(Base):
     )
 
     user: Mapped[User] = relationship()
+
+
+class ExerciseAttempt(Base):
+    """A run of the hidden + visible tests for a browser coding exercise (code runs client-side only)."""
+
+    __tablename__ = "exercise_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    slug: Mapped[str] = mapped_column(String(64), index=True)
+    language: Mapped[str] = mapped_column(String(32))
+    passed: Mapped[int] = mapped_column(Integer, default=0)
+    total: Mapped[int] = mapped_column(Integer, default=0)
+    code: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+
+
+class ExerciseHelp(Base):
+    """Help a learner opened on a coding exercise: a hint level, or the reference solution.
+
+    ``before_pass`` is true when it was opened before the learner had passed every test,
+    which is what marks an exercise as "solved with help". New table, so it's additive.
+    """
+
+    __tablename__ = "exercise_help"
+    __table_args__ = (UniqueConstraint("user_id", "slug", "kind", "level", name="uq_exercise_help"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    slug: Mapped[str] = mapped_column(String(64), index=True)
+    kind: Mapped[str] = mapped_column(String(16))  # "hint" or "solution"
+    level: Mapped[int] = mapped_column(Integer, default=0)  # hint level 1..3; 0 for the solution
+    before_pass: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
 class AppMeta(Base):

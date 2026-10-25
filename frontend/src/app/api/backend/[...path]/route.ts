@@ -26,6 +26,9 @@ const RULES: Rule[] = [
   { method: "GET", pattern: /^daily\/me$/ },
   { method: "POST", pattern: /^feedback$/ },
   { method: "GET", pattern: /^feedback\/mine$/ },
+  { method: "GET", pattern: /^exercises$/ },
+  { method: "GET", pattern: /^exercises\/[a-z0-9-]{1,64}$/ },
+  { method: "POST", pattern: /^exercises\/[a-z0-9-]{1,64}\/(submit|hints|solution)$/ },
   { method: "GET", pattern: /^feedback\/recent$/, public: true },
   { method: "GET", pattern: /^(languages|domains|health)$/, public: true },
 ];

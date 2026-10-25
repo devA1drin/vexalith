@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Vexalith Java runner</title>
+<!--
+  Runs Java in the browser for Vexalith exercises.
+  CheerpJ (Leaning Technologies) is used under its free Community License for FOSS projects:
+  https://cheerpj.com/docs/licensing . javac comes from OpenJDK 8 tools.jar (GPL-2.0 with Classpath Exception),
+  served by the unpkg CDN (package dataslope-tools-jar).
+-->
+<script src="https://cjrtnc.leaningtech.com/4.3/loader.js"></script>
+</head>
+<body>
+<script type="module">
+const TOOLS_JAR = "https://unpkg.com/dataslope-tools-jar@1.0.0/tools.jar";
+const TOOLS_JAR_BYTES = 18307716;
+let ready = null;
+function init(progress) {
+  if (!ready) {
+    ready = (async () => {
+      await cheerpjInit({ version: 8, status: "none" });
+      progress("Downloading the Java compiler (about 18 MB, only the first time)…");
+      const r = await fetch(TOOLS_JAR);
+      if (!r.ok || !r.body) throw new Error("Couldn't download the Java compiler.");
+      // unpkg sends no Content-Length, so the known size of this pinned file is used for the percent.
+      const total = Number(r.headers.get("content-length")) || TOOLS_JAR_BYTES;
+      const reader = r.body.getReader();
+      const chunks = [];
+      let done = 0, shown = -1;
+      for (;;) {
+        const { value, done: end } = await reader.read();
+        if (end) break;
+        chunks.push(value);
+        done += value.length;
+        const pct = Math.min(99, Math.floor((done / total) * 100));
+        if (pct !== shown) { shown = pct; progress(`Downloading the Java compiler… ${pct}% (only the first time)`); }
+      }
+      const jar = new Uint8Array(done);
+      let at = 0;
+      for (const c of chunks) { jar.set(c, at); at += c.length; }
+      cheerpOSAddStringFile("/str/tools.jar", jar);
+    })();
+    ready.catch(() => { ready = null; });
+  }
+  return ready;
+}
+async function readText(path) {
+  try { return await (await cjFileBlob(path)).text(); } catch { return ""; }
+}
+window.addEventListener("message", async (ev) => {
+  if (ev.origin !== location.origin || ev.source !== window.parent) return;
+  const { id, solution, main, outFile, msgFile } = ev.data || {};
+  if (!id) return;
+  const reply = (data) => window.parent.postMessage({ id, ...data }, location.origin);
+  try {
+    await init((s) => reply({ status: s }));
+    reply({ status: "Compiling your Java…" });
+    cheerpOSAddStringFile("/str/Solution.java", solution);
+    cheerpOSAddStringFile("/str/Main.java", main);
+    const code = await cheerpjRunMain("com.sun.tools.javac.Main", "/str/tools.jar",
+      "-nowarn", "-encoding", "UTF-8", "-Xstdout", msgFile, "-d", "/files/", "/str/Solution.java", "/str/Main.java");
+    if (code !== 0) return reply({ compileError: await readText(msgFile) });
+    reply({ status: "Running tests…" });
+    await cheerpjRunMain("Main", "/files/");
+    reply({ results: await readText(outFile) });
+  } catch (e) {
+    reply({ failed: String(e && e.message || e) });
+  }
+});
+window.parent.postMessage({ ready: true }, location.origin);
+</script>
+</body>
+</html>

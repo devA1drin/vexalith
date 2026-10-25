@@ -3,6 +3,8 @@
 from app.models.models import (
     AppMeta,
     DailyCompletion,
+    ExerciseAttempt,
+    ExerciseHelp,
     Feedback,
     HintUsage,
     Question,
@@ -24,6 +26,8 @@ __all__ = [
     "Feedback",
     "HintUsage",
     "DailyCompletion",
+    "ExerciseAttempt",
+    "ExerciseHelp",
     "SkillMastery",
     "UserFeedback",
 ]
