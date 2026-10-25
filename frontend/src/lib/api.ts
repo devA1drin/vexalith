@@ -153,9 +153,20 @@ export type ExerciseSummary = {
   best_passed: number;
   solved: boolean;
   attempted: boolean;
+  solved_with_help?: boolean;
 };
 export type ExerciseList = { exercises: ExerciseSummary[]; runnable_languages: CodeLanguage[]; coming_soon: string[] };
-export type ExerciseDetail = Omit<ExerciseSummary, "tests" | "attempted"> & {
+/** "How to solve it": hints shown so far, and (once you pass or reveal it) the explanation and solution. */
+export type ExerciseHelp = {
+  hint_count: number;
+  hints: string[];
+  solution_revealed: boolean;
+  solved_with_help: boolean;
+  explanation: { idea: string; approach: string[]; pitfalls: string[]; pattern: string } | null;
+  solution: string | null;
+};
+export type ExerciseDetail = Omit<ExerciseSummary, "tests"> & {
+  help: ExerciseHelp;
   description: string;
   function: string;
   starter: string;
@@ -165,7 +176,16 @@ export type ExerciseDetail = Omit<ExerciseSummary, "tests" | "attempted"> & {
   hidden_tests: { args: unknown[] }[];
 };
 export type SubmitCheck = { index: number; visible: boolean; passed: boolean; expected?: unknown };
-export type SubmitOut = { slug: string; passed: number; total: number; solved: boolean; first_solve: boolean; checks: SubmitCheck[]; message: string };
+export type SubmitOut = {
+  slug: string;
+  passed: number;
+  total: number;
+  solved: boolean;
+  first_solve: boolean;
+  checks: SubmitCheck[];
+  message: string;
+  help: ExerciseHelp;
+};
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) {
@@ -228,4 +248,7 @@ export const api = {
   exercise: (slug: string) => request<ExerciseDetail>(`/exercises/${encodeURIComponent(slug)}`),
   submitExercise: (slug: string, code: string, results: { output: string | null; error: string | null }[]) =>
     request<SubmitOut>(`/exercises/${encodeURIComponent(slug)}/submit`, { method: "POST", body: JSON.stringify({ code, results }) }),
+  exerciseHint: (slug: string) => request<ExerciseHelp>(`/exercises/${encodeURIComponent(slug)}/hints`, { method: "POST", body: "{}" }),
+  revealSolution: (slug: string, confirm: boolean) =>
+    request<ExerciseHelp>(`/exercises/${encodeURIComponent(slug)}/solution`, { method: "POST", body: JSON.stringify({ confirm }) }),
 };
