@@ -45,8 +45,20 @@ def test_every_prompt_has_a_clear_task_line_and_guide():
         question, _, task = q["prompt"].partition("\n\n")
         assert question.strip() and task.startswith("Your task: "), q["title"]
         guide = q["rubric"]["guide"]
-        assert guide["task"] and guide["look_for"] and guide["good_answer"]
+        assert guide["look_for"] and "task" not in guide
+        # "What counts" only for fill-in questions; explain questions get it from the task line.
+        assert bool(guide["good_answer"]) == (q["rubric"].get("kind") == "fill_blank")
+        # The task line never repeats the old one-size-fits-all sentence count.
+        assert "2-4" not in task, q["title"]
         assert q["rubric"]["original_prompt"].strip()
+
+
+def test_task_line_follows_what_the_question_asks():
+    outputs = [q for q in SEED_QUESTIONS if q["domain"] == "fundamentals" and q["language"] == "python" and q["rubric"].get("kind") != "fill_blank" and "print" in q["prompt"].split("\n\n")[0]]
+    assert outputs and all("exact output" in q["prompt"] for q in outputs)
+    bugs = [q for q in SEED_QUESTIONS if q["domain"] == "debugging" and q["rubric"].get("kind") != "fill_blank"]
+    assert bugs and all("name the bug" in q["prompt"] for q in bugs)
+    assert len({q["prompt"].split("\n\n")[-1] for q in SEED_QUESTIONS}) >= 12
 
 
 def test_fill_blank_prompts_say_to_type_only_the_code():
