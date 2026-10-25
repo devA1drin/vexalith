@@ -57,12 +57,19 @@ There are 536 questions in total across 8 language tracks and 10 skill domains, 
    - **Beginner**, **Intermediate** or **Advanced**: you only get questions at that level.
    You can also filter by **Topic** (such as **OOP**, **Fundamentals**, **Debugging** or **Data Structures**) using the Topic row under the level selector. Your choices are remembered as you skip or advance.
 3. **Answer in your own words.** Say what the code does and why.
+   Every question is written in plain words and ends with a **Your task** line that says exactly what to do
+   (for example *"write the exact output first, then explain in 2-4 sentences why"*). Above the answer box, the
+   **How to answer** box explains the kind of question (explain it, fill in the missing code, or solve a puzzle),
+   what to look for in the code, and what a good answer contains. You can fold it away once you know the drill.
+   Write the way you talk. The grader understands casual answers: contractions (*doesn't*, *didnt*), everyday
+   words (*"it spits out five"*, *"cuz"*, *"the loop never ends"*), number words and small typos (*"varible"*).
+   A casual answer with the right ideas scores about the same as a polished one; an answer that is off topic still fails.
    You can write in **English, Filipino (Tagalog) or Taglish** (a mix of both), for example:
    *"Nagpi-print siya ng 5 kasi copy lang ng value ang nakuha ng y."*
    The grader checks your ideas, not your language, so the same explanation gets about the same score in any of the three.
    Keep code (like `i < 5` or `acc.append(x)`) as you would type it.
    Stuck? Press **Show hint**. Every question has 3 hints, shown one at a time: first a way to approach it, then the key idea, then the point your answer must make. Each hint takes 10% off that answer's score (30% at most).
-4. **Read your feedback.** Right or wrong, you get an explanation: the key concept, a checklist of everything a full answer covers (ticked where you got it), any common mistake you made and why it's wrong, and the model answer. For fill-in-the-missing-code questions you also see the correct code.
+4. **Read your feedback.** It is written like a friendly tutor talking to you ("You're on the right track. You got 1 of the 3 key points..."). Right or wrong, you get an explanation: the key concept, a checklist of everything a full answer covers (ticked where you got it), any common mistake you made and why it's wrong, and the model answer. For fill-in-the-missing-code questions you also see the correct code.
    If you answered in Filipino or Taglish, the feedback says so ("Tinanggap ang sagot mo sa Filipino") and its headings switch to Filipino. Use the **English / Filipino** switch on the feedback to choose; your browser remembers it. The rubric points and the model answer stay in English.
 
 The app adapts to you. It gives you more questions on the skills you find hardest, and harder questions as you improve.
