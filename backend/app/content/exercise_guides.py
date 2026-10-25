@@ -19,6 +19,8 @@ can reuse, not a narration of one particular program.
 
 from __future__ import annotations
 
+import textwrap
+
 # Language vocabulary used in the texts below.
 TOOLS = {
     "python": {
@@ -346,7 +348,8 @@ def explanation_for(slug: str, language: str) -> dict:
 def commented_solution(slug: str, language: str, solution: str) -> str:
     """The reference solution with a short comment on top (no line-by-line notes)."""
     mark = "#" if language == "python" else "//"
-    note = f"{mark} {GUIDES[concept_of(slug)]['comment']}\n"
+    # Short lines, so the comment stays readable in a narrow column without scrolling.
+    note = "".join(f"{mark} {line}\n" for line in textwrap.wrap(GUIDES[concept_of(slug)]["comment"], 48))
     if solution.startswith("<?php\n"):
         return "<?php\n" + note + solution[len("<?php\n"):]
     return note + solution

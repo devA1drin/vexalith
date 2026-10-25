@@ -150,7 +150,9 @@ def test_every_exercise_has_progressive_hints_and_a_generalized_explanation(e):
     assert "{" not in text and "}" not in text  # every language placeholder was filled in
     assert "line " not in text.lower()  # general strategy, not a line-by-line walkthrough
     sol = commented_solution(e["slug"], e["language"], e["solution"])
-    assert sol.endswith(e["solution"].removeprefix("<?php\n")) and len(sol.splitlines()) == len(e["solution"].splitlines()) + 1
+    assert sol.endswith(e["solution"].removeprefix("<?php\n"))
+    notes = sol.splitlines()[: len(sol.splitlines()) - len(e["solution"].splitlines())]
+    assert 1 <= len(notes) <= 3 and all(len(n) <= 52 for n in notes)  # brief comments only
 
 
 @pytest.mark.parametrize("e", [e for e in EXERCISES if e["language"] == "python"], ids=lambda e: e["slug"])
