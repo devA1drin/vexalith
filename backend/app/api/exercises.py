@@ -24,8 +24,19 @@ from app.models.models import ExerciseAttempt, User
 router = APIRouter(prefix="/exercises", tags=["exercises"])
 
 
+def _norm(value: Any) -> Any:
+    # 3.0 and 3 are the same answer (PHP and C++ sometimes print whole numbers as floats).
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, list):
+        return [_norm(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _norm(v) for k, v in value.items()}
+    return value
+
+
 def canonical(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return json.dumps(_norm(value), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
 def same(output: str | None, expected: Any) -> bool:
@@ -80,8 +91,8 @@ def get_exercise(slug: str, user: User = Depends(get_current_user), db: Session 
     p, _ = _best(db, user).get(slug, (0, 0))
     return {
         "slug": e["slug"], "title": e["title"], "language": e["language"], "difficulty": e["difficulty"],
-        "topic": e["topic"], "description": e["description"], "task": e["task"],
-        "function": e["function"], "starter": e["starter"],
+        "topic": e["topic"], "description": e["description"],
+        "function": e["function"], "starter": e["starter"], "signature": e.get("signature"),
         "timeout_ms": e["timeout_ms"],
         "visible_tests": [{"args": t["args"], "expected": t["expected"]} for t in e["tests"][:v]],
         # Hidden tests: only the inputs. Their expected values stay on the server.
@@ -123,6 +134,6 @@ def submit(slug: str, body: SubmitIn, user: User = Depends(get_current_user), db
         "first_solve": solved and not was_solved, "checks": checks,
         "message": (
             "All tests passed. Nice work!" if solved
-            else f"{passed} of {len(tests)} tests passed. Check the failing ones and try again, you're getting there."
+            else "Check the failing tests below and try again. You're getting there."
         ),
     }
