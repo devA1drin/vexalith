@@ -19,7 +19,7 @@ export function Footer() {
           <Link href="/progress" className="hover:text-accent">Progress</Link>
           <Link href="/feedback" className="hover:text-accent">Feedback</Link>
         </nav>
-        <p className="font-mono text-[11px] text-ink-500 sm:text-right">© {new Date().getFullYear()} {SITE.name} · py · js · php · c++ · html · css</p>
+        <p className="font-mono text-[11px] text-ink-500 sm:text-right">© {new Date().getFullYear()} {SITE.name} · py · js · php · c++ · java · html · css</p>
       </div>
     </footer>
   );

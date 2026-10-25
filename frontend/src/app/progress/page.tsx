@@ -7,6 +7,7 @@ import { MasteryChart } from "@/components/MasteryChart";
 import { CountUp } from "@/components/CountUp";
 import { Recommendations } from "@/components/Recommendations";
 import { TrendChart } from "@/components/TrendChart";
+import { PageIntro } from "@/components/PageIntro";
 
 export default function ProgressPage() {
   const [data, setData] = useState<ProgressOut | null>(null);
@@ -30,8 +31,25 @@ export default function ProgressPage() {
         </div>
         <Link href="/practice" className="btn-primary">Continue <span className="btn-arrow">→</span></Link>
       </div>
+      <PageIntro>
+        This page shows how you&apos;re doing. <span className="text-ink-100">Mastery</span> (0-100) goes up when you answer a skill
+        well and down a little when you miss, so the lowest bar is the best thing to practise next. Hints lower a
+        question&apos;s score a bit; skips don&apos;t.
+      </PageIntro>
       {error && <p role="alert" className="border-l-2 border-signal pl-3 text-sm text-signal-soft">{error}</p>}
       {!data && !error && <div className="card h-48 animate-pulse" />}
+      {data && data.total_responses === 0 && (
+        <div className="card border-accent p-6" data-testid="progress-empty">
+          <p className="label mb-2 text-accent">Welcome · nothing here yet</p>
+          <h2 className="font-display text-2xl font-semibold text-ink-50">Answer your first question to see your progress.</h2>
+          <ol className="mt-3 space-y-1 text-sm text-ink-300">
+            <li>1. Go to Practice and pick a language (Python is a good start).</li>
+            <li>2. Choose Beginner if you&apos;re new, or leave it on Adaptive.</li>
+            <li>3. Answer a few questions. Your charts and suggestions show up here right away.</li>
+          </ol>
+          <Link href="/practice?level=beginner" className="btn-primary mt-4 inline-flex">Start practising <span className="btn-arrow">→</span></Link>
+        </div>
+      )}
       {data && (
         <>
           <div className="grid grid-cols-2 border-l border-t border-ink-700 sm:grid-cols-4" data-testid="progress-stats">
