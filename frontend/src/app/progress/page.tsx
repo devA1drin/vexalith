@@ -26,7 +26,7 @@ export default function ProgressPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-700 pb-5">
         <div>
-          <p className="label mb-2">03 · Progress{data && ` · ${data.display_name}`}</p>
+          <p className="label mb-2">04 · Progress{data && ` · ${data.display_name}`}</p>
           <h1 className="font-display text-4xl font-bold tracking-tight text-ink-50">Where your logic holds.</h1>
         </div>
         <Link href="/practice" className="btn-primary">Continue <span className="btn-arrow">→</span></Link>

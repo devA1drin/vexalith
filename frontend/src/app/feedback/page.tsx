@@ -9,7 +9,7 @@ export default async function FeedbackPage() {
   return (
     <div className="space-y-8">
       <div className="border-b border-ink-700 pb-5">
-        <p className="label mb-2">04 · Feedback</p>
+        <p className="label mb-2">05 · Feedback</p>
         <h1 className="font-display text-4xl font-bold tracking-tight text-ink-50">Found a bug in our logic?</h1>
         <p className="mt-2 max-w-xl text-ink-300">Report a broken question, a wrong grade, or the feature you want next. Recent notes are public — emails never are.</p>
       </div>

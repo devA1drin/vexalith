@@ -15,7 +15,7 @@ export default async function DailyPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink-700 pb-5">
         <div>
-          <p className="label mb-2">02 · Daily · one question for everyone</p>
+          <p className="label mb-2">03 · Daily · one question for everyone</p>
           <h1 className="font-display text-4xl font-bold tracking-tight text-ink-50">Today&apos;s challenge.</h1>
         </div>
         {session?.user && <Link href="/progress" className="btn-ghost">Your progress <span className="btn-arrow">→</span></Link>}
