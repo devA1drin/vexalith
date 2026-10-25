@@ -29,9 +29,30 @@ def test_exercise_content_is_well_formed():
         assert e["function"] in e["starter"] and e["function"] in e["solution"]
         assert 1 <= e["visible"] < len(e["tests"]), e["slug"]  # at least one hidden test
         assert 1000 <= e["timeout_ms"] <= 10000
-        assert e["topic"] and e["task"].startswith("Your task: ")
+        assert e["topic"]
         json.dumps([t["args"] for t in e["tests"]])
-    assert set(COMING_SOON_LANGUAGES) == {"cpp", "java", "php"}
+    assert COMING_SOON_LANGUAGES == ()
+    counts = {lang: sum(e["language"] == lang for e in EXERCISES) for lang in RUNNABLE_LANGUAGES}
+    assert min(counts.values()) >= 10, counts
+
+
+TYPES = {"int", "long", "bool", "str", "int[]", "str[]", "map"}
+
+
+@pytest.mark.parametrize("e", [e for e in EXERCISES if e["language"] in ("cpp", "java", "php")], ids=lambda e: e["slug"])
+def test_typed_exercises_have_a_signature_matching_their_tests(e):
+    sig = e["signature"]
+    assert set(sig["params"]) <= TYPES and sig["returns"] in TYPES
+    for t in e["tests"]:
+        assert len(t["args"]) == len(sig["params"])
+        for a, ty in zip(t["args"], sig["params"]):
+            ok = {"int": lambda v: type(v) is int, "str": lambda v: isinstance(v, str),
+                  "int[]": lambda v: isinstance(v, list) and all(type(x) is int for x in v)}[ty](a)
+            assert ok, (e["slug"], a, ty)
+    if e["language"] == "java":
+        assert "class Solution" in e["starter"] and "class Solution" in e["solution"]
+    if e["language"] == "php":
+        assert e["starter"].startswith("<?php") and e["solution"].startswith("<?php")
 
 
 @pytest.mark.parametrize("e", [e for e in EXERCISES if e["language"] == "python"], ids=lambda e: e["slug"])
@@ -57,12 +78,12 @@ def test_list_and_detail_never_leak_hidden_expected_values(client):
     r = client.get("/api/exercises", headers=H)
     assert r.status_code == 200
     body = r.json()
-    assert body["coming_soon"] == ["cpp", "java", "php"]
+    assert body["coming_soon"] == []
     assert len(body["exercises"]) == len(EXERCISES)
     d = client.get("/api/exercises/py-fizzbuzz", headers=H).json()
     assert d["visible_tests"][0]["expected"] == ["1", "2", "Fizz", "4", "Buzz"]
     assert d["hidden_tests"] and all(set(t) == {"args"} for t in d["hidden_tests"])
-    assert d["task"].startswith("Your task: ") and d["topic"] == "Loops & conditions"
+    assert d["topic"] == "Loops & conditions"
     assert client.get("/api/exercises/nope", headers=H).status_code == 404
     assert client.get("/api/exercises").status_code == 401
 
@@ -96,3 +117,18 @@ def test_submit_rejects_wrong_shape_and_counts_errors_as_failures(client):
     # Outputs that aren't JSON are just wrong, never a server error.
     res = [{"output": "not json"} for _ in e["tests"]]
     assert client.post("/api/exercises/js-reverse-string/submit", headers=H, json={"code": "x", "results": res}).json()["passed"] == 0
+
+
+def test_canonical_treats_whole_floats_as_ints_but_keeps_real_fractions():
+    from app.api.exercises import canonical
+
+    assert canonical([3.0, {"b": 2.0, "a": [1.0]}]) == canonical([3, {"a": [1], "b": 2}])
+    assert canonical(2.5) != canonical(2)
+    assert canonical(True) == "true"
+
+
+def test_submit_for_a_typed_language_accepts_whole_floats(client):
+    e = next(x for x in EXERCISES if x["slug"] == "php-sum-list")
+    res = [{"output": json.dumps(float(t["expected"]))} for t in e["tests"]]
+    j = client.post("/api/exercises/php-sum-list/submit", headers=H, json={"code": e["solution"], "results": res}).json()
+    assert j["solved"] and j["message"] == "All tests passed. Nice work!"
