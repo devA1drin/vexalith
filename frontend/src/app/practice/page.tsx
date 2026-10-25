@@ -247,10 +247,9 @@ export default function PracticePage() {
         </div>
       </div>
 
-      <PageIntro steps={["Pick a language and level", "Read the code and the question", "Answer in your own words", "Get friendly feedback, then Next"]}>
-        Each question shows a short piece of code (or a puzzle) and asks you something about it. Answer the way you would
-        explain it to a friend: casual words, English, Filipino or Taglish are all fine. Stuck? Open a hint (each one costs
-        10% of that question&apos;s score) or press Skip. Skipping never counts against you.
+      <PageIntro>
+        Read a short piece of code (or a puzzle) and answer in your own words. Stuck? Open a hint or press Skip;
+        skipping never counts against you.
       </PageIntro>
 
       <div className="-mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -358,8 +357,8 @@ export default function PracticePage() {
                   disabled={!!feedback || busy === "submit"}
                   placeholder={
                     isBlank
-                      ? "Type the code that replaces the highlighted ? slot.\nThen, if you like, say why it fits (English, Filipino or Taglish)."
-                      : "Start with your answer, then say why.\ne.g. \"It prints 5 because y got a copy of x.\"\nCasual words are fine. Puwede ring sumagot sa Filipino o Taglish."
+                      ? "e.g. i += 1"
+                      : "Write your answer here. Casual words are fine."
                   }
                   className="input min-h-[11rem] flex-1 font-mono text-[13px] leading-6"
                 />
