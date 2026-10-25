@@ -1,7 +1,7 @@
 """Hands-on coding exercises that learners run in their own browser.
 
 Code is executed client-side only (Pyodide for Python, a locked-down Web Worker
-for JavaScript). The server never runs learner code: it sends the test inputs,
+for JavaScript; see exercises_more.py for C++, Java and PHP). The server never runs learner code: it sends the test inputs,
 and for hidden tests it only compares the outputs the browser reports against
 expected values it keeps to itself.
 
@@ -12,9 +12,8 @@ The first ``visible`` tests are shown to the learner; the rest are hidden.
 
 from __future__ import annotations
 
-RUNNABLE_LANGUAGES = ("python", "javascript")
-# No free, keyless, reliable runner exists for these on Vercel today (see README).
-COMING_SOON_LANGUAGES = ("cpp", "java", "php")
+RUNNABLE_LANGUAGES = ("python", "javascript", "cpp", "java", "php")
+COMING_SOON_LANGUAGES: tuple[str, ...] = ()
 
 
 def _ex(slug, language, difficulty, title, description, function, starter, solution, tests, visible=2, timeout_ms=4000):
@@ -155,21 +154,16 @@ JS_EXERCISES = [
 TOPICS = {
     "sum-list": "Loops", "sum-array": "Loops", "largest": "Loops", "fizzbuzz": "Loops & conditions",
     "reverse-string": "Strings", "count-vowels": "Strings", "palindrome": "Strings", "capitalize": "Strings",
-    "word-count": "Dictionaries & objects", "unique": "Lists & sets", "two-sum": "Hash maps",
+    "word-count": "Dictionaries & maps", "unique": "Lists & sets", "two-sum": "Hash maps",
     "fibonacci": "Loops & math", "binary-search": "Searching", "flatten": "Recursion",
 }
 
 
-def task_line(e: dict) -> str:
-    return (
-        f"Your task: finish the function {e['function']} so it gives the right answer for every test. "
-        "Press Run to try the example tests, then Submit to check the hidden tests too."
-    )
-
-
 for _e in PY_EXERCISES + JS_EXERCISES:
     _e["topic"] = TOPICS[_e["slug"].split("-", 1)[1]]
-    _e["task"] = task_line(_e)
 
-EXERCISES = PY_EXERCISES + JS_EXERCISES
+from app.content.exercises_more import build  # noqa: E402
+
+MORE_EXERCISES = build(_ex)
+EXERCISES = PY_EXERCISES + JS_EXERCISES + MORE_EXERCISES
 BY_SLUG = {e["slug"]: e for e in EXERCISES}
