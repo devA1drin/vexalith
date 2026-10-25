@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError, type ExerciseDetail, type SubmitOut } from "@/lib/api";
 import { CodeEditor } from "@/components/CodeEditor";
+import { SolvePanel } from "@/components/SolvePanel";
 import { CODE_LANGUAGES } from "@/lib/codeLanguages";
 import { errorTip, wrongTip } from "@/lib/codeHelp";
 import { runTests, sameValue, show, showOutput, type RunResult } from "@/lib/runner";
@@ -72,6 +73,7 @@ export default function ExercisePage({ params }: { params: Promise<{ slug: strin
   const [busy, setBusy] = useState<null | "run" | "submit">(null);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [verdict, setVerdict] = useState<SubmitOut | null>(null);
+  const [tried, setTried] = useState(false);
   const draftKey = `vexalith_code_${slug}`;
 
   useEffect(() => {
@@ -120,9 +122,10 @@ export default function ExercisePage({ params }: { params: Promise<{ slug: strin
           );
           next = next.map((row) => ({ ...row, passed: out.checks[row.index]?.passed ?? false }));
           setVerdict(out);
-          if (out.solved) setEx({ ...ex, solved: true, best_passed: out.total });
+          setEx({ ...ex, help: out.help, attempted: true, ...(out.solved ? { solved: true, best_passed: out.total } : {}) });
         }
         setRows(next);
+        setTried(true);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong while running your code.");
       } finally {
@@ -157,7 +160,11 @@ export default function ExercisePage({ params }: { params: Promise<{ slug: strin
         <Link href="/code" className="label mb-3 inline-block hover:text-ink-50">← 02 · Code</Link>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h1 className="font-display text-3xl font-bold tracking-tight text-ink-50 sm:text-4xl">{ex.title}</h1>
-          {ex.solved && <span className="chip border-accent text-accent" data-testid="solved-chip">✓ Solved</span>}
+          {ex.solved && (
+            <span className="chip border-accent text-accent" data-testid="solved-chip">
+              {ex.help.solved_with_help ? "✓ Solved with help" : "✓ Solved"}
+            </span>
+          )}
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="chip text-ink-100">{info.name}</span>
@@ -186,6 +193,14 @@ export default function ExercisePage({ params }: { params: Promise<{ slug: strin
             </ul>
             <p className="mt-3 text-[13px] text-ink-400">+ {ex.hidden_tests.length} hidden test{ex.hidden_tests.length === 1 ? "" : "s"} when you submit.</p>
           </div>
+          <SolvePanel
+            slug={ex.slug}
+            language={ex.language}
+            help={ex.help}
+            tried={tried || ex.attempted}
+            solved={ex.solved}
+            onChange={(help) => setEx((cur) => (cur ? { ...cur, help } : cur))}
+          />
         </div>
 
         <div className="min-w-0 space-y-3">
@@ -224,7 +239,11 @@ export default function ExercisePage({ params }: { params: Promise<{ slug: strin
           {verdict ? (
             <div className={`border-l-2 pl-4 ${verdict.solved ? "border-accent" : "border-signal"}`} data-testid="verdict">
               <p className="font-display text-xl font-semibold text-ink-50">{verdict.passed} of {verdict.total} tests passed</p>
-              <p className="text-sm text-ink-300">{verdict.first_solve ? "First solve! It's saved to your progress." : verdict.message}</p>
+              <p className="text-sm text-ink-300">{verdict.first_solve
+                  ? verdict.help.solved_with_help
+                    ? "Solved with help. It's saved to your progress; try the next one with hints first."
+                    : "First solve! It's saved to your progress."
+                  : verdict.message}</p>
             </div>
           ) : (
             <p className="label">{passedCount} of {rows.length} example tests passed</p>
