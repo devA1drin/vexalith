@@ -89,7 +89,7 @@ export default function CodePage() {
                       <div className="flex items-center justify-between gap-2">
                         <span className="chip">{e.topic}</span>
                         {e.solved ? (
-                          <span className="font-mono text-[11px] uppercase tracking-wider text-accent">✓ Solved</span>
+                          <span className="font-mono text-[11px] uppercase tracking-wider text-accent">{e.solved_with_help ? "✓ With help" : "✓ Solved"}</span>
                         ) : e.attempted ? (
                           <span className="font-mono text-[11px] text-ink-400">{e.best_passed}/{e.tests} passed</span>
                         ) : null}
