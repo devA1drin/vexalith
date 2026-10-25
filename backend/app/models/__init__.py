@@ -4,6 +4,7 @@ from app.models.models import (
     AppMeta,
     DailyCompletion,
     ExerciseAttempt,
+    ExerciseHelp,
     Feedback,
     HintUsage,
     Question,
@@ -26,6 +27,7 @@ __all__ = [
     "HintUsage",
     "DailyCompletion",
     "ExerciseAttempt",
+    "ExerciseHelp",
     "SkillMastery",
     "UserFeedback",
 ]

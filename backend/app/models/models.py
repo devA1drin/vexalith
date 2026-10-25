@@ -239,6 +239,25 @@ class ExerciseAttempt(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
 
 
+class ExerciseHelp(Base):
+    """Help a learner opened on a coding exercise: a hint level, or the reference solution.
+
+    ``before_pass`` is true when it was opened before the learner had passed every test,
+    which is what marks an exercise as "solved with help". New table, so it's additive.
+    """
+
+    __tablename__ = "exercise_help"
+    __table_args__ = (UniqueConstraint("user_id", "slug", "kind", "level", name="uq_exercise_help"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    slug: Mapped[str] = mapped_column(String(64), index=True)
+    kind: Mapped[str] = mapped_column(String(16))  # "hint" or "solution"
+    level: Mapped[int] = mapped_column(Integer, default=0)  # hint level 1..3; 0 for the solution
+    before_pass: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class AppMeta(Base):
     """Key/value metadata (e.g. schema_version)."""
 

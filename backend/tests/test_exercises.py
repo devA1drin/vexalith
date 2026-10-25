@@ -132,3 +132,75 @@ def test_submit_for_a_typed_language_accepts_whole_floats(client):
     res = [{"output": json.dumps(float(t["expected"]))} for t in e["tests"]]
     j = client.post("/api/exercises/php-sum-list/submit", headers=H, json={"code": e["solution"], "results": res}).json()
     assert j["solved"] and j["message"] == "All tests passed. Nice work!"
+
+
+# ---- "How to solve it": hints, generalized explanation, solution reveal ----
+
+from app.content.exercise_guides import GUIDES, commented_solution, concept_of, explanation_for, hints_for  # noqa: E402
+
+
+@pytest.mark.parametrize("e", EXERCISES, ids=lambda e: e["slug"])
+def test_every_exercise_has_progressive_hints_and_a_generalized_explanation(e):
+    assert concept_of(e["slug"]) in GUIDES
+    hints = hints_for(e["slug"], e["language"])
+    assert 2 <= len(hints) <= 3 and len(set(hints)) == len(hints)
+    x = explanation_for(e["slug"], e["language"])
+    assert x["idea"] and x["pattern"] and 3 <= len(x["approach"]) <= 5 and 2 <= len(x["pitfalls"]) <= 4
+    text = " ".join([*hints, x["idea"], x["pattern"], *x["approach"], *x["pitfalls"]])
+    assert "{" not in text and "}" not in text  # every language placeholder was filled in
+    assert "line " not in text.lower()  # general strategy, not a line-by-line walkthrough
+    sol = commented_solution(e["slug"], e["language"], e["solution"])
+    assert sol.endswith(e["solution"].removeprefix("<?php\n")) and len(sol.splitlines()) == len(e["solution"].splitlines()) + 1
+
+
+@pytest.mark.parametrize("e", [e for e in EXERCISES if e["language"] == "python"], ids=lambda e: e["slug"])
+def test_commented_python_solutions_still_pass(e):
+    sol = commented_solution(e["slug"], "python", e["solution"])
+    for t in e["tests"]:
+        assert _run_python(sol, e["function"], t["args"]) == t["expected"]
+
+
+def test_help_is_hidden_until_earned_and_hints_reveal_one_at_a_time(client):
+    h = auth(pid="7101", name="Helper", email="helper@example.com")
+    d = client.get("/api/exercises/py-two-sum", headers=h).json()
+    assert d["help"] == {"hint_count": 3, "hints": [], "solution_revealed": False, "solved_with_help": False, "explanation": None, "solution": None}
+    assert "seen" not in json.dumps(d["help"])  # nothing of the reference solution leaks
+    one = client.post("/api/exercises/py-two-sum/hints", headers=h).json()
+    assert len(one["hints"]) == 1 and one["solution"] is None and one["explanation"] is None
+    for _ in range(4):
+        last = client.post("/api/exercises/py-two-sum/hints", headers=h).json()
+    assert len(last["hints"]) == 3  # capped
+    assert client.get("/api/exercises/py-two-sum", headers=h).json()["help"]["hints"] == last["hints"]
+    assert client.post("/api/exercises/nope/hints", headers=h).status_code == 404
+    assert client.post("/api/exercises/py-two-sum/hints").status_code == 401
+
+
+def test_solution_needs_an_attempt_or_a_confirm_and_marks_solved_with_help(client):
+    h = auth(pid="7102", name="Peeker", email="peeker@example.com")
+    assert client.post("/api/exercises/py-sum-list/solution", headers=h, json={}).status_code == 409
+    j = client.post("/api/exercises/py-sum-list/solution", headers=h, json={"confirm": True}).json()
+    assert j["solution_revealed"] and j["solved_with_help"] and "for n in nums" in j["solution"]
+    assert j["explanation"]["idea"] and j["explanation"]["approach"]
+    e = next(x for x in EXERCISES if x["slug"] == "py-sum-list")
+    right = [_run_python(e["solution"], "total", t["args"]) for t in e["tests"]]
+    client.post("/api/exercises/py-sum-list/submit", headers=h, json={"code": e["solution"], "results": _results(e, right)})
+    listing = {x["slug"]: x for x in client.get("/api/exercises?language=python", headers=h).json()["exercises"]}
+    assert listing["py-sum-list"]["solved"] and listing["py-sum-list"]["solved_with_help"]
+
+    # After a failed submit no confirm is needed.
+    e2 = next(x for x in EXERCISES if x["slug"] == "py-largest")
+    client.post("/api/exercises/py-largest/submit", headers=h, json={"code": "x", "results": [{"output": "0"} for _ in e2["tests"]]})
+    assert client.post("/api/exercises/py-largest/solution", headers=h, json={}).status_code == 200
+
+
+def test_passing_unlocks_the_explanation_without_marking_help(client):
+    h = auth(pid="7103", name="Solver", email="solver@example.com")
+    e = next(x for x in EXERCISES if x["slug"] == "py-reverse-string")
+    right = [_run_python(e["solution"], "reverse", t["args"]) for t in e["tests"]]
+    j = client.post("/api/exercises/py-reverse-string/submit", headers=h, json={"code": e["solution"], "results": _results(e, right)}).json()
+    assert j["solved"] and j["help"]["explanation"]["pattern"] and j["help"]["solution"]
+    assert not j["help"]["solved_with_help"]
+    wrong = client.post("/api/exercises/py-fizzbuzz/submit", headers=h, json={"code": "x", "results": [{"output": "0"}] * 4}).json()
+    assert wrong["help"]["solution"] is None and wrong["help"]["explanation"] is None
+    listing = {x["slug"]: x for x in client.get("/api/exercises?language=python", headers=h).json()["exercises"]}
+    assert listing["py-reverse-string"]["solved"] and not listing["py-reverse-string"]["solved_with_help"]
