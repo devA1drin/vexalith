@@ -2,7 +2,8 @@ import type { BadgeGroup } from "@/lib/api";
 
 /**
  * Custom badge marks: a frame per group (answers = chamfered plate, streaks = hexagon,
- * languages = shield, code = terminal window) and a line-art glyph or short mono label.
+ * languages = shield, code = terminal window, paths = route marker) and a line-art glyph or
+ * short mono label.
  * Earned marks are lime; locked ones are graphite with a dashed frame.
  */
 
@@ -11,12 +12,14 @@ const FRAMES: Record<BadgeGroup, string> = {
   streaks: "M32 3L57 17.5V46.5L32 61L7 46.5V17.5Z",
   languages: "M8 6H56V40L32 60L8 40Z",
   code: "M6 8H58V56H6Z",
+  paths: "M32 3L61 32L32 61L3 32Z",
 };
 const INNER: Record<BadgeGroup, string> = {
   answers: "M22 9H42L55 22V42L42 55H22L9 42V22Z",
   streaks: "M32 8.5L52 20V44L32 55.5L12 44V20Z",
   languages: "M13 11H51V38L32 54L13 38Z",
   code: "M11 18H53V51H11Z",
+  paths: "M32 9.5L54.5 32L32 54.5L9.5 32Z",
 };
 
 /** Short labels drawn in mono type inside the mark. */
@@ -88,6 +91,32 @@ function Glyph({ id, color }: { id: string; color: string }) {
             const r = (a - 90) * (Math.PI / 180);
             return <rect key={a} x={32 + 11 * Math.cos(r) - 3} y={33 + 11 * Math.sin(r) - 3} width="6" height="6" fill={color} />;
           })}
+        </>
+      );
+    case "path-step": // a route out of its first, filled node
+      return (
+        <>
+          <path d="M23 38H31V28H39" {...s} strokeWidth={2} />
+          <rect x="18" y="35" width="6" height="6" fill={color} />
+          <rect x="39" y="25" width="6" height="6" fill="none" stroke={color} strokeWidth={1.6} />
+        </>
+      );
+    case "path-finisher": // a route that ends at a flag
+      return (
+        <>
+          <path d="M18 40H26V32H33" {...s} strokeWidth={2} strokeDasharray="3 2.5" />
+          <path d="M36 20V44" {...s} strokeWidth={2} />
+          <path d="M36.5 21H46L43 25.5L46 30H36.5Z" fill={color} />
+        </>
+      );
+    case "path-three": // three routes meeting at one point
+      return (
+        <>
+          <path d="M32 32L20 24M32 32L44 24M32 32V45" {...s} strokeWidth={1.8} />
+          <rect x="17" y="21" width="5" height="5" fill={color} />
+          <rect x="42" y="21" width="5" height="5" fill={color} />
+          <rect x="29.5" y="43" width="5" height="5" fill={color} />
+          <rect x="29" y="29" width="6" height="6" fill="none" stroke={color} strokeWidth={1.6} />
         </>
       );
     default:

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { XpSyncOut } from "@/lib/api";
+import type { BadgeGroup, XpSyncOut } from "@/lib/api";
 import { XP_EVENT } from "@/lib/xp";
 import { BadgeMark, LevelMark } from "@/components/BadgeMark";
 
@@ -80,7 +80,8 @@ export function XpToaster() {
   );
 }
 
-function groupOf(key: string): "answers" | "streaks" | "languages" | "code" {
+function groupOf(key: string): BadgeGroup {
+  if (key.startsWith("path-")) return "paths";
   if (key.startsWith("ex-") || key === "unassisted" || key === "polyglot") return "code";
   if (key.startsWith("streak") || key === "daily-first") return "streaks";
   if (["cpp-answer", "java-answer", "oop-answer", "filipino"].includes(key)) return "languages";
