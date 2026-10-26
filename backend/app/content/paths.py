@@ -67,12 +67,12 @@ PATHS: tuple[Path, ...] = (
          "Start here if you're new. Plain logic, binary and pseudocode, no single language needed.", "01", (
              Step("values-and-steps", "Values and steps", "Following instructions in order, simple rules and binary numbers.",
                   ("general",), ("fundamentals",), (BEG,), "any:sum-list"),
+             Step("first-algorithms", "Your first algorithms", "Greedy change, shortest paths and keeping the best so far.",
+                  ("general",), ("algorithms",), (BEG,), "any:reverse-string", 3),
              Step("conditions-loops", "Conditions and loops", "AND, OR, and loops that halve, count and keep the largest.",
                   ("general",), ("fundamentals",), (INT,), "any:fizzbuzz"),
              Step("think-like-a-computer", "Think like the computer", "Nested loops, loops that never end and adding in binary.",
                   ("general",), ("fundamentals",), (ADV,), "any:largest"),
-             Step("first-algorithms", "Your first algorithms", "Greedy change, shortest paths and keeping the best so far.",
-                  ("general",), ("algorithms",), (BEG,), "any:reverse-string", 3),
          )),
     Path("web", "Web Basics",
          "HTML for structure and CSS for looks: pages that read well, work on phones and are easy to use.", "</>", (
