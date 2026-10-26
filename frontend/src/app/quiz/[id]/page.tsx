@@ -342,7 +342,9 @@ const VERDICT: Record<FeedbackPayload["verdict"], [string, string]> = {
 function InstantVerdict({ f }: { f: FeedbackPayload }) {
   const [word, tone] = VERDICT[f.verdict];
   const answer = f.accepted_answers?.[0] || f.reference_answer;
-  const why = f.misconceptions[0]?.explanation || (f.missed_concepts[0] ? `Missed: ${f.missed_concepts[0]}` : "");
+  const raw = f.misconceptions[0]?.explanation || (f.missed_concepts[0] ? `Missed: ${f.missed_concepts[0]}` : "");
+  // Don't repeat the answer line in other words.
+  const why = answer && raw.includes(answer) && raw.length < answer.length + 40 ? "" : raw;
   return (
     <div className={`rise border px-4 py-3 ${tone}`} role="status" data-testid="instant-verdict">
       <div className="font-display text-lg font-semibold">{word}</div>
