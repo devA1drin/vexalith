@@ -9,6 +9,7 @@ import { HowToAnswer } from "@/components/HowToAnswer";
 import { PageIntro } from "@/components/PageIntro";
 import { PromptText } from "@/components/PromptText";
 import { announceXp } from "@/lib/xp";
+import { PracticeTabs } from "@/components/PracticeTabs";
 
 const LANG_KEY = "vexalith_language";
 const FOCUS_KEY = "vexalith_focus";
@@ -249,6 +250,7 @@ export default function PracticePage() {
           )}
         </div>
       </div>
+      <PracticeTabs />
 
       <PageIntro>
         Read a short piece of code (or a puzzle) and answer in your own words. Stuck? Open a hint or press Skip;

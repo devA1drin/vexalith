@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const links: { href: string; label: string; n: string; also?: string[] }[] = [
   { href: "/paths", label: "Paths", n: "00" },
-  { href: "/practice", label: "Practice", n: "01" },
+  { href: "/practice", label: "Practice", n: "01", also: ["/review", "/quiz"] },
   { href: "/code", label: "Code", n: "02" },
   { href: "/daily", label: "Daily", n: "03" },
   { href: "/progress", label: "Progress", n: "04", also: ["/badges", "/leaderboard"] },
