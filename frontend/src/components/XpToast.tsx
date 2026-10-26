@@ -82,6 +82,7 @@ export function XpToaster() {
 
 function groupOf(key: string): BadgeGroup {
   if (key.startsWith("path-")) return "paths";
+  if (key === "second-look" || key === "beat-the-clock") return "review";
   if (key.startsWith("ex-") || key === "unassisted" || key === "polyglot") return "code";
   if (key.startsWith("streak") || key === "daily-first") return "streaks";
   if (["cpp-answer", "java-answer", "oop-answer", "filipino"].includes(key)) return "languages";
