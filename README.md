@@ -100,10 +100,20 @@ Topics: loops, strings, conditions, lists and sets, dictionaries/maps, hash maps
 1. Pick a language with the tabs at the top (your choice is remembered).
 2. Open an exercise. **Your task** says what the function must do; the example tests show inputs and the right answers.
 3. Write the function in the editor. Your draft is saved in your browser, and **Reset** brings back the starter code.
-4. Press **Run examples** (or Ctrl + Enter) to try the example tests. Anything you print shows up under each test.
-5. Press **Submit** to also run the hidden tests. Pass them all and the exercise is marked solved on your progress.
+4. Press **Run my code** to run your code as a normal program and see what it prints, like on your own computer.
+   You can write a `main()` or print at the top level. If your program reads input (`input()`, `Scanner`, `cin`,
+   `readline()`, `prompt()`), type it in the **Input** box first, one line per answer.
+5. Press **Run examples** (or Ctrl + Enter) to check your function against the example tests.
+6. Press **Submit** to also run the hidden tests. Pass them all and the exercise is marked solved on your progress.
 
-When a test fails you see what was expected, what your code returned and a short tip. A compile error is shown once, with the line number.
+Everything shows up in the **Output** panel right under the editor:
+
+- **Printed**: what your program wrote out. **Errors and warnings**: what it wrote to the error stream.
+- If your code doesn't compile, or stops with an error, you see the message in plain words with the line number.
+- For each example test you see **Expected** and **Got** side by side, plus anything you printed during that test.
+- While a language engine downloads the first time, the panel shows a progress bar.
+
+A test stops after 4 seconds (6 for Java) and a program after 10 seconds, so an endless loop can't freeze the page.
 
 **Stuck? Use "How to solve it"** (under the example tests; on a phone it sits above the editor):
 
@@ -271,6 +281,12 @@ In the backend folder, with the virtual environment turned on:
 pytest -q
 ```
 
+And in the frontend folder, for the code-runner tests:
+
+```bash
+npm test
+```
+
 ## Project folders
 
 ```
@@ -326,7 +342,7 @@ On Windows try `py` instead of `python3`. Make sure you turned on the virtual en
 
 1. Fork this repository (make your own copy on GitHub).
 2. Create a branch for your change: `git checkout -b my-change`.
-3. Make your change, then run the tests (`pytest -q`) and `npm run build`.
+3. Make your change, then run the tests (`pytest -q` in the backend, `npm test` in the frontend) and `npm run build`.
 4. Push your branch and open a pull request that explains what you changed and why.
 
 Ideas are welcome too: use the **Feedback** page in the app.
