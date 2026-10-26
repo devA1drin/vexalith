@@ -48,21 +48,27 @@ function init(progress) {
 async function readText(path) {
   try { return await (await cjFileBlob(path)).text(); } catch { return ""; }
 }
+// Message: { id, files: [{ name, text }], run, outFile, msgFile }.
+// Compiles every file with javac, then runs the class named in `run`.
 window.addEventListener("message", async (ev) => {
   if (ev.origin !== location.origin || ev.source !== window.parent) return;
-  const { id, solution, main, outFile, msgFile } = ev.data || {};
-  if (!id) return;
+  const { id, files, run, outFile, msgFile } = ev.data || {};
+  if (!id || !Array.isArray(files) || !/^[A-Za-z_$][\w$]*$/.test(run || "")) return;
   const reply = (data) => window.parent.postMessage({ id, ...data }, location.origin);
   try {
     await init((s) => reply({ status: s }));
     reply({ status: "Compiling your Java…" });
-    cheerpOSAddStringFile("/str/Solution.java", solution);
-    cheerpOSAddStringFile("/str/Main.java", main);
+    const paths = [];
+    for (const f of files) {
+      if (!/^[A-Za-z_$][\w$]*\.java$/.test(f.name)) continue;
+      cheerpOSAddStringFile("/str/" + f.name, f.text);
+      paths.push("/str/" + f.name);
+    }
     const code = await cheerpjRunMain("com.sun.tools.javac.Main", "/str/tools.jar",
-      "-nowarn", "-encoding", "UTF-8", "-Xstdout", msgFile, "-d", "/files/", "/str/Solution.java", "/str/Main.java");
+      "-nowarn", "-encoding", "UTF-8", "-Xstdout", msgFile, "-d", "/files/", ...paths);
     if (code !== 0) return reply({ compileError: await readText(msgFile) });
-    reply({ status: "Running tests…" });
-    await cheerpjRunMain("Main", "/files/");
+    reply({ status: "Running…" });
+    await cheerpjRunMain(run, "/files/");
     reply({ results: await readText(outFile) });
   } catch (e) {
     reply({ failed: String(e && e.message || e) });

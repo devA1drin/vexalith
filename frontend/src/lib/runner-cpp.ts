@@ -6,8 +6,19 @@
  *    functions we give it (write text, read the clock, exit), so it has no way to
  *    reach the network, files or the page. A timer terminates it if it hangs.
  */
-import { cppCompileMessage, cppProgram, parseMarked } from "./harness";
-import { makeWorker, markerWatcher, timeoutMessage, type RunResult, type Signature, type TestInput } from "./runner";
+import { cppCompileMessage, cppProgram, cppSource, hasCppMain, parseMarked } from "./harness";
+import {
+  makeWorker,
+  markerWatcher,
+  outputCollector,
+  programFailure,
+  programTimeoutMessage,
+  timeoutMessage,
+  type ProgramResult,
+  type RunResult,
+  type Signature,
+  type TestInput,
+} from "./runner";
 
 export const YOWASP_CLANG_VERSION = "22.0.0-git20542-10";
 const CLANG_URL = `https://cdn.jsdelivr.net/npm/@yowasp/clang@${YOWASP_CLANG_VERSION}/gen/bundle.js`;
@@ -47,6 +58,8 @@ self.onmessage = async (ev) => {
 const RUN_WORKER = `
 self.onmessage = async (ev) => {
   const bytes = ev.data.wasm;
+  const input = new TextEncoder().encode(ev.data.stdin || "");
+  let inputAt = 0;
   let mem = null;
   const enc = new TextEncoder(), dec = new TextDecoder();
   const view = () => new DataView(mem.buffer);
@@ -59,7 +72,7 @@ self.onmessage = async (ev) => {
         text += dec.decode(new Uint8Array(mem.buffer, p, l)); total += l;
       }
       v.setUint32(nwritten, total, true);
-      if (fd === 1 || fd === 2) self.postMessage({ chunk: text });
+      if (fd === 1 || fd === 2) self.postMessage({ chunk: text, fd });
       return 0;
     },
     proc_exit(code) { throw new Exit(code); },
@@ -71,7 +84,20 @@ self.onmessage = async (ev) => {
     random_get(p, l) { crypto.getRandomValues(new Uint8Array(mem.buffer, p, l)); return 0; },
     fd_fdstat_get(fd, out) { const v = view(); v.setUint8(out, 2); return 0; },
     fd_prestat_get() { return 8; },
-    fd_read(fd, iovs, n, nread) { view().setUint32(nread, 0, true); return 0; },
+    fd_read(fd, iovs, n, nread) {
+      const v = view(); let total = 0;
+      if (fd === 0) {
+        for (let i = 0; i < n; i++) {
+          const p = v.getUint32(iovs + i * 8, true), l = v.getUint32(iovs + i * 8 + 4, true);
+          const take = Math.min(l, input.length - inputAt);
+          new Uint8Array(mem.buffer, p, take).set(input.subarray(inputAt, inputAt + take));
+          inputAt += take; total += take;
+          if (take < l) break;
+        }
+      }
+      v.setUint32(nread, total, true);
+      return 0;
+    },
     fd_close() { return 0; },
     fd_seek() { return 70; },
   };
@@ -136,9 +162,6 @@ export async function run(
   timeoutMs: number,
   onStatus?: (s: string) => void,
 ): Promise<RunResult[]> {
-  if (/\bint\s+main\s*\(/.test(code)) {
-    return tests.map(() => ({ output: null, error: "Please remove your main() function. The tests call your function for you.", stdout: "", ms: 0 }));
-  }
   const { wasm, log } = await compile(cppProgram(code, fn, sig, tests), onStatus);
   if (!wasm) {
     const msg = cppCompileMessage(log);
@@ -170,15 +193,53 @@ export async function run(
       const d = ev.data;
       if (typeof d.chunk === "string") watch.push(d.chunk);
       else if (d.done) {
-        if (d.crash) {
-          const friendly = /unreachable|out of bounds|memory access/i.test(d.crash)
-            ? "Your program crashed, often from reading outside a vector or string, or dividing by zero."
-            : `Your program crashed: ${d.crash}`;
-          finish(friendly);
-        } else if (d.code) finish(`Your program stopped with exit code ${d.code}.`);
+        if (d.crash) finish(crashMessage(d.crash));
+        else if (d.code) finish(`Your program stopped with exit code ${d.code}.`);
         else finish();
       }
     };
     worker.postMessage({ wasm });
+  });
+}
+
+function crashMessage(crash: string): string {
+  return /unreachable|out of bounds|memory access/i.test(crash)
+    ? "Your program crashed, often from reading outside a vector or string, or dividing by zero."
+    : `Your program crashed: ${crash}`;
+}
+
+/** "Run my code": compile the learner's program as it is and run its main(). */
+export async function runProgram(code: string, stdin: string, timeoutMs: number, onStatus?: (s: string) => void): Promise<ProgramResult> {
+  if (!hasCppMain(code)) {
+    return programFailure(
+      "missing",
+      "There's no main() to start from. Add int main() { … } that calls your function, or use Run examples to test it.",
+    );
+  }
+  const { wasm, log } = await compile(cppSource(code), onStatus);
+  if (!wasm) return programFailure("compile", cppCompileMessage(log));
+  onStatus?.("Running your code…");
+  const worker = makeWorker(RUN_WORKER);
+  const col = outputCollector();
+  // Compiler warnings are worth seeing too.
+  const warnings = cppCompileMessage(log);
+  if (log.trim() && warnings !== "Your code didn't compile.") col.push("err", warnings + "\n");
+  const t0 = performance.now();
+  return new Promise<ProgramResult>((resolve) => {
+    const done = (problem: ProgramResult["problem"], exitCode = 0) => {
+      clearTimeout(timer);
+      worker.terminate();
+      resolve({ ...col.value, problem, exitCode, ms: performance.now() - t0 });
+    };
+    const timer = setTimeout(() => done({ kind: "timeout", message: programTimeoutMessage(timeoutMs) }), timeoutMs);
+    worker.onmessage = (ev) => {
+      const d = ev.data;
+      if (typeof d.chunk === "string") col.push(d.fd === 2 ? "err" : "out", d.chunk);
+      else if (d.done) {
+        if (d.crash) done({ kind: "runtime", message: crashMessage(d.crash) });
+        else done(null, d.code || 0);
+      }
+    };
+    worker.postMessage({ wasm, stdin });
   });
 }
