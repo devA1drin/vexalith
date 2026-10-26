@@ -8,6 +8,7 @@ import { SolvePanel } from "@/components/SolvePanel";
 import { CODE_LANGUAGES } from "@/lib/codeLanguages";
 import { errorTip, wrongTip } from "@/lib/codeHelp";
 import { exampleCall } from "@/lib/harness";
+import { announceXp } from "@/lib/xp";
 import { PROGRAM_TIMEOUT_MS, runProgram, runTests, sameValue, show, showOutput, type ProgramResult, type RunResult } from "@/lib/runner";
 import { OutputFrame, ProgramOutput, RunLoading } from "@/components/RunOutput";
 
@@ -190,6 +191,7 @@ export default function ExercisePage({ params }: { params: Promise<{ slug: strin
           );
           next = next.map((row) => ({ ...row, passed: out.checks[row.index]?.passed ?? false }));
           setVerdict(out);
+          if (out.solved) void announceXp();
           setEx({ ...ex, help: out.help, attempted: true, ...(out.solved ? { solved: true, best_passed: out.total } : {}) });
         }
         setRows(next);

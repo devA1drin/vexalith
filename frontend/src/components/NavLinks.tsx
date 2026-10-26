@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const links = [
+const links: { href: string; label: string; n: string; also?: string[] }[] = [
   { href: "/practice", label: "Practice", n: "01" },
   { href: "/code", label: "Code", n: "02" },
   { href: "/daily", label: "Daily", n: "03" },
-  { href: "/progress", label: "Progress", n: "04" },
+  { href: "/progress", label: "Progress", n: "04", also: ["/badges", "/leaderboard"] },
   { href: "/feedback", label: "Feedback", n: "05" },
 ];
 
@@ -16,7 +16,7 @@ export function NavLinks() {
   return (
     <nav aria-label="Primary" className="order-last flex w-full gap-0 border-t border-ink-800 pt-2 sm:order-2 sm:w-auto sm:border-0 sm:pt-0">
       {links.map((l) => {
-        const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
+        const active = [l.href, ...(l.also ?? [])].some((h) => pathname === h || pathname.startsWith(`${h}/`));
         return (
           <Link
             key={l.href}

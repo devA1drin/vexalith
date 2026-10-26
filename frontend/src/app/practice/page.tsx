@@ -7,6 +7,7 @@ import { FeedbackCard } from "@/components/FeedbackCard";
 import { HintPanel } from "@/components/HintPanel";
 import { HowToAnswer } from "@/components/HowToAnswer";
 import { PageIntro } from "@/components/PageIntro";
+import { announceXp } from "@/lib/xp";
 
 const LANG_KEY = "vexalith_language";
 const FOCUS_KEY = "vexalith_focus";
@@ -145,6 +146,7 @@ export default function PracticePage() {
     try {
       const res = await api.submitResponse(question.id, answer);
       setFeedback(res.feedback);
+      void announceXp();
     } catch (e) {
       handleError(e, "Submit failed");
     } finally {
