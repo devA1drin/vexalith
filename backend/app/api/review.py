@@ -12,12 +12,15 @@ from app.services import quiz, review
 
 router = APIRouter(prefix="/review", tags=["review"])
 
-Filter = Query("", max_length=64, pattern=r"^[a-z0-9_-]*$")
+SLUG = r"^[a-z0-9_-]*$"
 
 
 @router.get("")
 def review_list(
-    topic: str = Filter, language: str = Filter, path: str = Filter, difficulty: str = Filter,
+    topic: str = Query("", max_length=64, pattern=SLUG),
+    language: str = Query("", max_length=32, pattern=SLUG),
+    path: str = Query("", max_length=40, pattern=SLUG),
+    difficulty: str = Query("", pattern=r"^(|beginner|intermediate|advanced)$"),
     kind: str = Query("", pattern=r"^(|question|exercise)$"),
     user: User = Depends(get_current_user), db: Session = Depends(get_db),
 ) -> dict:
