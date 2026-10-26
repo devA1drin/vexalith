@@ -96,10 +96,9 @@ def _exercise_results(db: Session, user: User, slugs: list[str]) -> dict[str, st
     if not slugs:
         return {}
     out: dict[str, str] = {}
-    for slug, passed in db.query(ExerciseAttempt.slug, ExerciseAttempt.passed).filter(
+    for slug, passed, total in db.query(ExerciseAttempt.slug, ExerciseAttempt.passed, ExerciseAttempt.total).filter(
         ExerciseAttempt.user_id == user.id, ExerciseAttempt.slug.in_(slugs)
     ).all():
-        total = len(EXERCISES[slug]["tests"]) if slug in EXERCISES else 0
         if total and passed >= total:
             out[slug] = "solved"
         else:
