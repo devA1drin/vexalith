@@ -32,7 +32,7 @@ DEFAULT_AVATAR = "initials-ink"
 RESERVED_HANDLES = {"admin", "administrator", "moderator", "mod", "staff", "support", "vexalith", "system", "root", "null"}
 
 _CONTROL = re.compile(r"[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]")
-_NAME_OK = re.compile(r"^[^\W_](?:[\w .'\-]*[^\W_])?$")
+_NAME_OK = re.compile(r"^[^\W_](?:[\w .'\-]*[^\W_])?\.?$")  # may end with an initial's dot
 _HANDLE_OK = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9 ._-]*[A-Za-z0-9])?$")
 
 
@@ -209,38 +209,44 @@ def profile_out(db: Session, user: User) -> dict:
 
 
 def update(db: Session, user: User, body: dict) -> dict:
-    """Apply only the fields that were sent. Raises ProfileError (field + message) on bad input."""
-    s = get_settings(db, user)
-    p = xp.ensure_profile(db, user)
-    if "display_name" in body and body["display_name"] is not None:
-        s.display_name = clean_name(body["display_name"], user)
-    if "handle" in body and body["handle"] is not None:
-        handle = clean_handle(body["handle"], user)
-        if handle != p.handle:
-            if handle_taken(db, handle, user):
-                raise ProfileError("handle", "Someone already has that handle.")
-            p.handle = handle
+    """Apply only the fields that were sent. Everything is checked first, so a bad field saves nothing.
+    Raises ProfileError (field + message) on bad input."""
+    s_new: dict = {}
+    p_new: dict = {}
+    if body.get("display_name") is not None:
+        s_new["display_name"] = clean_name(body["display_name"], user)
+    if body.get("handle") is not None:
+        p_new["handle"] = clean_handle(body["handle"], user)
     if body.get("visibility") is not None:
         if body["visibility"] not in xp.VISIBILITY:
             raise ProfileError("visibility", "Pick one of the options.")
-        p.visibility = body["visibility"]
+        p_new["visibility"] = body["visibility"]
     if body.get("avatar") is not None:
         a = body["avatar"]
         if a not in AVATARS and not (a == "photo" and user.avatar_url):
             raise ProfileError("avatar", "Pick one of the marks.")
-        s.avatar = a
+        s_new["avatar"] = a
     if body.get("bio") is not None:
-        s.bio = clean_bio(body["bio"])
+        s_new["bio"] = clean_bio(body["bio"])
     if body.get("practice_languages") is not None:
-        s.practice_languages = clean_languages(body["practice_languages"])
+        s_new["practice_languages"] = clean_languages(body["practice_languages"])
     if body.get("answer_language") is not None:
         if body["answer_language"] not in ANSWER_LANGUAGES:
             raise ProfileError("answer_language", "Pick English, Filipino or Taglish.")
-        s.answer_language = body["answer_language"]
+        s_new["answer_language"] = body["answer_language"]
     if "quiz_defaults" in body:
         from app.services import quiz
 
-        s.quiz_defaults = check_quiz_defaults(body["quiz_defaults"], quiz.options(db, user))
+        s_new["quiz_defaults"] = check_quiz_defaults(body["quiz_defaults"], quiz.options(db, user))
+
+    s = get_settings(db, user)
+    p = xp.ensure_profile(db, user)
+    if "handle" in p_new and p_new["handle"] != p.handle and handle_taken(db, p_new["handle"], user):
+        raise ProfileError("handle", "Someone already has that handle.")
+    for k, v in s_new.items():
+        setattr(s, k, v)
+    for k, v in p_new.items():
+        setattr(p, k, v)
     try:
         db.commit()
     except IntegrityError as e:  # two people grabbing the same handle at the same moment
