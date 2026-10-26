@@ -135,7 +135,7 @@ PATH_BADGES: list[Badge] = [
 ]
 # Mistake review and timed quiz badges.
 REVIEW_BADGES: list[Badge] = [
-    Badge("second-look", "Second Look", "Fix 10 mistakes from Review mistakes.", "review"),
+    Badge("second-look", "Second Look", "Fix 10 mistakes in Review.", "review"),
     Badge("beat-the-clock", "Beat the Clock", "Score 80% or more on a timed quiz of 10 or more questions.", "review"),
 ]
 ALL_BADGES: list[Badge] = BADGES + PATH_BADGES + REVIEW_BADGES

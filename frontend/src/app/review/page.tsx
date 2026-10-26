@@ -10,12 +10,15 @@ import { ago, LEVEL, until } from "@/lib/when";
 import { FILTER_KEYS, filtersQuery, readFilters } from "@/lib/reviewFilters";
 
 
+const PAGE = 8;
+
 export default function ReviewPage() {
   const router = useRouter();
   const [filters, setFilters] = useState<ReviewFilters | null>(null);
   const [data, setData] = useState<ReviewOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [shown, setShown] = useState(PAGE);
 
   useEffect(() => setFilters(readFilters(window.location.search)), []);
 
@@ -28,6 +31,7 @@ export default function ReviewPage() {
 
   useEffect(() => {
     if (!filters) return;
+    setShown(PAGE);
     window.history.replaceState(null, "", `/review${filtersQuery(filters)}`);
     load(filters);
   }, [filters, load]);
@@ -100,10 +104,15 @@ export default function ReviewPage() {
             <Empty filtered={active > 0} anyOpen={data.counts.to_fix + data.counts.check_again > 0} onClear={() => setFilters({})} />
           ) : (
             <ul className="space-y-3" data-testid="review-list">
-              {data.items.map((it, i) => (
-                <ItemCard key={it.key} item={it} i={i} busy={busy === it.key} onRetry={() => retry(it)} />
+              {data.items.slice(0, shown).map((it, i) => (
+                <ItemCard key={it.key} item={it} i={i % PAGE} busy={busy === it.key} onRetry={() => retry(it)} />
               ))}
             </ul>
+          )}
+          {data.items.length > shown && (
+            <button type="button" className="btn-ghost w-full justify-center" onClick={() => setShown((n) => n + PAGE)} data-testid="show-more">
+              Show {Math.min(PAGE, data.items.length - shown)} more · {data.items.length - shown} left
+            </button>
           )}
 
           {data.coming_back.length > 0 && (
