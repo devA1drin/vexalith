@@ -39,6 +39,13 @@ const RULES: Rule[] = [
   { method: "GET", pattern: /^paths\/[a-z0-9-]{1,40}$/ },
   { method: "GET", pattern: /^paths\/[a-z0-9-]{1,40}\/steps\/\d{1,2}\/next$/ },
   { method: "POST", pattern: /^paths\/[a-z0-9-]{1,40}\/steps\/\d{1,2}\/skip-ahead$/ },
+  { method: "GET", pattern: /^review$/ },
+  { method: "POST", pattern: /^review\/questions\/\d+\/retry$/ },
+  { method: "POST", pattern: /^review\/exercises\/[a-z0-9-]{1,64}\/retry$/ },
+  { method: "GET", pattern: /^quiz\/(options|history)$/ },
+  { method: "POST", pattern: /^quiz$/ },
+  { method: "GET", pattern: /^quiz\/\d{1,10}(\/results)?$/ },
+  { method: "POST", pattern: /^quiz\/\d{1,10}\/(answer|skip|finish)$/ },
   { method: "GET", pattern: /^feedback\/recent$/, public: true },
   { method: "GET", pattern: /^(languages|domains|health)$/, public: true },
 ];
