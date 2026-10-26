@@ -403,7 +403,7 @@ def _quiz_xp(db: Session, user: User, slots: list[QuizAnswer]) -> int:
             keys[k] = when
     total = 0
     for ev in db.query(XpEvent).filter(XpEvent.user_id == user.id, XpEvent.key.in_(list(keys))).all():
-        if abs((_aware(ev.created_at) - keys[ev.key]).total_seconds()) < 2:
+        if abs((_aware(ev.created_at) - keys[ev.key]).total_seconds()) < 0.001:
             total += ev.amount
     return total
 
