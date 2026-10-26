@@ -65,7 +65,7 @@ export default function CodePage() {
       </div>
 
       <p className="font-mono text-[12px] text-ink-400" data-testid="engine-note">
-        Runs on {info.engine} · {info.firstLoad}
+        Runs in your browser on {info.engine} · {info.firstLoad}
       </p>
 
       {error && <p role="alert" className="border-l-2 border-signal pl-3 text-sm text-signal-soft">{error}</p>}
