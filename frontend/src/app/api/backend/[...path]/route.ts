@@ -35,6 +35,10 @@ const RULES: Rule[] = [
   { method: "PUT", pattern: /^xp\/profile$/ },
   { method: "POST", pattern: /^xp\/profile\/handle$/ },
   { method: "GET", pattern: /^leaderboard$/ },
+  { method: "GET", pattern: /^paths$/ },
+  { method: "GET", pattern: /^paths\/[a-z0-9-]{1,40}$/ },
+  { method: "GET", pattern: /^paths\/[a-z0-9-]{1,40}\/steps\/\d{1,2}\/next$/ },
+  { method: "POST", pattern: /^paths\/[a-z0-9-]{1,40}\/steps\/\d{1,2}\/skip-ahead$/ },
   { method: "GET", pattern: /^feedback\/recent$/, public: true },
   { method: "GET", pattern: /^(languages|domains|health)$/, public: true },
 ];

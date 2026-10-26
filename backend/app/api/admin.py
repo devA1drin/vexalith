@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.session import get_db
-from app.models.models import DailyCompletion, ExerciseAttempt, ExerciseHelp, Feedback, HintUsage, LearnerProfile, QuestionSkip, Response, SkillMastery, User, UserBadge, UserFeedback, XpEvent
+from app.models.models import DailyCompletion, ExerciseAttempt, ExerciseHelp, Feedback, HintUsage, LearnerProfile, PathActivity, PathSkip, QuestionSkip, Response, SkillMastery, User, UserBadge, UserFeedback, XpEvent
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -55,6 +55,8 @@ def purge_users(body: PurgeRequest, db: Session = Depends(get_db)) -> dict:
             "exercise_help": len(list(db.scalars(select(ExerciseHelp.id).where(ExerciseHelp.user_id == user.id)))),
             "xp_events": len(list(db.scalars(select(XpEvent.id).where(XpEvent.user_id == user.id)))),
             "badges": len(list(db.scalars(select(UserBadge.id).where(UserBadge.user_id == user.id)))),
+            "path_activity": len(list(db.scalars(select(PathActivity.id).where(PathActivity.user_id == user.id)))),
+            "path_skips": len(list(db.scalars(select(PathSkip.id).where(PathSkip.user_id == user.id)))),
         }
         if not body.dry_run:
             if resp_ids:
@@ -70,6 +72,8 @@ def purge_users(body: PurgeRequest, db: Session = Depends(get_db)) -> dict:
             db.execute(delete(XpEvent).where(XpEvent.user_id == user.id))
             db.execute(delete(UserBadge).where(UserBadge.user_id == user.id))
             db.execute(delete(LearnerProfile).where(LearnerProfile.user_id == user.id))
+            db.execute(delete(PathActivity).where(PathActivity.user_id == user.id))
+            db.execute(delete(PathSkip).where(PathSkip.user_id == user.id))
             db.execute(delete(User).where(User.id == user.id))
         report.append({"identity": ident, "found": True, "name": user.display_name, **counts})
     if not body.dry_run:

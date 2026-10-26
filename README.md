@@ -151,6 +151,28 @@ How it stays safe and fast:
 CheerpJ is made by [Leaning Technologies](https://leaningtech.com) and used here under its free
 [Community License](https://cheerpj.com/docs/licensing). If you run a copy of Vexalith for a company, check that license first.
 
+## Learning paths
+
+Not sure what to practise next? Open **Paths** in the top bar and follow one. Each path is a short list of steps,
+from beginner to advanced. A step is a handful of questions on one theme, often with a coding exercise.
+
+| Path | Steps |
+|---|---|
+| Programming Fundamentals (no single language needed) | 4 |
+| Web Basics (HTML and CSS) | 6 |
+| Python, JavaScript, C++, Java, PHP | 7 each |
+| Object-Oriented Programming | 4 |
+| Logic & Algorithms | 5 |
+
+- **Finishing a step:** score 75% on its questions (your best answers count, up to 4 questions) and pass its exercise, if it has one.
+- **Opening the next step:** 75% on the questions *or* the exercise passed is enough.
+- **Skip ahead:** you can open any locked step early. The step says you skipped ahead, and earlier steps stay open.
+- Questions inside a step are picked by the same engine as Practice, and graded the same way.
+- Answers and exercises you did before paths existed count, so you may already be part of the way along.
+- **Continue where you left off** on the home and Progress pages takes you back to your step.
+- **XP:** +25 for each step you finish and +100 for a whole path. Three badges go with them:
+  **Trailhead** (your first step), **Path Finisher** (a whole path) and **Wayfinder** (three paths).
+
 ## XP, levels and badges
 
 You earn **XP** (experience points) as you learn. Your level and XP sit in the top bar; click them to see
@@ -162,6 +184,7 @@ You earn **XP** (experience points) as you learn. Your level and XP sit in the t
 | Passed a coding exercise (first time only) | 30 beginner, 50 intermediate, 80 advanced |
 | Finished the daily challenge | 15 a day |
 | Kept a daily streak going | +5 for each day in a row after the first, up to +30 a day |
+| Finished a learning path step / a whole path | 25 / 100 |
 
 - Each hint takes 10% off that answer's XP (at most 30% off). On coding exercises, **Solved with help** takes 25% off,
   and the most you can lose is half.
@@ -174,6 +197,7 @@ They're named Initiate, Tracer, Debugger, Builder, Solver, Architect, Optimizer,
 **20 badges** mark real milestones: your first right answer, 10 and 50 right answers, an advanced question, mastering a topic,
 your first daily challenge, 3, 7 and 30-day streaks, a right answer in C++, in Java, on OOP and in Filipino or Taglish,
 your first exercise passed in each language, an exercise passed without hints, and exercises passed in all five languages.
+Three more come with [learning paths](#learning-paths).
 
 ### Leaderboard
 
@@ -325,12 +349,12 @@ npm test
 ```
 vexalith/
 ├── backend/            The server (Python, FastAPI)
-│   ├── app/content/    All the questions and their answer keys, the coding exercises and their hints/explanations
+│   ├── app/content/    All the questions and their answer keys, the coding exercises and their hints/explanations, the learning paths
 │   ├── app/services/   Picks your next question and tracks your progress
 │   ├── app/ai/         The graders (offline and AI model)
 │   └── tests/          Automatic tests
 ├── frontend/           The website (Next.js)
-│   ├── src/app/        One folder per page: practice, code, daily, progress, badges, leaderboard, feedback, login
+│   ├── src/app/        One folder per page: paths, practice, code, daily, progress, badges, leaderboard, feedback, login
 │   ├── src/lib/runner* The in-browser code runners (one file per language)
 │   └── public/runners/ The page that hosts the Java runner
 ├── docs/               Screenshots and advanced documentation

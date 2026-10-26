@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
-const PROTECTED = ["/practice", "/code", "/progress", "/badges", "/leaderboard"];
+const PROTECTED = ["/paths", "/practice", "/code", "/progress", "/badges", "/leaderboard"];
 const LEGACY_HOSTS = new Set(["critical-thinking-app-rho.vercel.app"]);
 
 export default auth((req) => {

@@ -4,6 +4,7 @@ import { Hero } from "@/components/Hero";
 import { Reveal } from "@/components/Reveal";
 import { Recommendations } from "@/components/Recommendations";
 import { DailyChallengeCard } from "@/components/DailyChallenge";
+import { ContinueCard } from "@/components/PathParts";
 
 const DOMAINS = [
   { n: "00", name: "Fundamentals", ask: "Start from zero. Every language.", code: "x = 5; y = x; x = 10  # y?" },
@@ -35,6 +36,7 @@ export default async function HomePage() {
       <Hero ctaHref={cta} signedIn={!!session?.user} />
 
       <Reveal as="section" className="space-y-6">
+        {session?.user && <ContinueCard />}
         <DailyChallengeCard signedIn={!!session?.user} />
         {session?.user && <Recommendations index="00" />}
       </Reveal>

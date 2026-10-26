@@ -10,6 +10,7 @@ import { TrendChart } from "@/components/TrendChart";
 import { PageIntro } from "@/components/PageIntro";
 import { RanksTabs } from "@/components/RanksTabs";
 import { ProgressLevel } from "@/components/ProgressLevel";
+import { ContinueCard } from "@/components/PathParts";
 
 export default function ProgressPage() {
   const [data, setData] = useState<ProgressOut | null>(null);
@@ -33,6 +34,7 @@ export default function ProgressPage() {
       </div>
       <RanksTabs />
       <ProgressLevel />
+      <ContinueCard />
       <PageIntro>
         <span className="text-ink-100">Mastery</span> (0-100) goes up when you answer a skill well and down a little when you
         miss, so the lowest bar is the best thing to practise next.

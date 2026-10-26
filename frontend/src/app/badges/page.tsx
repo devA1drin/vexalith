@@ -11,12 +11,14 @@ const GROUPS: { id: BadgeGroup; title: string }[] = [
   { id: "streaks", title: "Daily streaks" },
   { id: "languages", title: "Languages & topics" },
   { id: "code", title: "Coding exercises" },
+  { id: "paths", title: "Learning paths" },
 ];
 
 const RULES: [string, string][] = [
   ["Correct answer", "10 / 20 / 30 XP for beginner / intermediate / advanced, once per question. Each hint takes 10% off."],
   ["Coding exercise passed", "30 / 50 / 80 XP, once per exercise. Each hint takes 10% off, and Solved with help takes 25% off."],
   ["Daily challenge", "15 XP a day, plus a streak bonus of 5 XP for every day in a row, up to 30."],
+  ["Learning paths", "25 XP for each step you finish and 100 XP for finishing a whole path."],
 ];
 
 function when(iso: string | null) {

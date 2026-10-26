@@ -12,12 +12,13 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, daily, exercises, feedback, meta, progress, questions, responses, users, xp
+from app.api import admin, daily, exercises, feedback, meta, paths, progress, questions, responses, users, xp
 from app.config import get_settings
 from app.db.session import SessionLocal, engine
 from app.models.models import AppMeta, Question
 from app.schemas.schemas import HealthOut
 from app.services.question_bank import migrate_schema, seed_domains_and_questions
+from app.services.paths import mark_launch
 from app.services.xp import backfill_all
 
 logging.basicConfig(level=logging.INFO)
@@ -44,7 +45,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-for r in (users.router, questions.router, responses.router, progress.router, daily.router, exercises.router, feedback.router, meta.router, admin.router, xp.router):
+for r in (users.router, questions.router, responses.router, progress.router, daily.router, exercises.router, feedback.router, meta.router, admin.router, xp.router, paths.router):
     app.include_router(r, prefix="/api")
 
 _db_ready = False
@@ -69,7 +70,8 @@ def init_db() -> None:
     backfill_xp()
 
 
-XP_BACKFILL_KEY, XP_BACKFILL_VERSION = "xp_backfill", "1"
+# Version 2 re-runs the backfill once so learning-path steps already done earn their XP.
+XP_BACKFILL_KEY, XP_BACKFILL_VERSION = "xp_backfill", "2"
 
 
 def backfill_xp() -> None:
@@ -79,6 +81,7 @@ def backfill_xp() -> None:
     """
     db = SessionLocal()
     try:
+        mark_launch(db)  # before the backfill, so path XP for older work counts as past work
         meta = db.get(AppMeta, XP_BACKFILL_KEY)
         if meta is not None and meta.value == XP_BACKFILL_VERSION:
             return
