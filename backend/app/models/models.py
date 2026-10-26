@@ -265,3 +265,59 @@ class AppMeta(Base):
 
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[str] = mapped_column(String(255))
+
+
+# --- XP, badges and leaderboard (new tables, so they're additive; see app/services/xp.py) ---
+
+
+class XpEvent(Base):
+    """One XP award. ``key`` makes each award happen once (e.g. "answer:12", "daily:2026-10-20").
+
+    ``created_at`` is when the learner did the thing (so XP from older history lands in the
+    right week). ``retro`` marks awards counted from history the first time XP was turned on.
+    ``notified`` flips once the browser has shown the learner a toast for it.
+    """
+
+    __tablename__ = "xp_events"
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_xp_event_key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    key: Mapped[str] = mapped_column(String(96))
+    kind: Mapped[str] = mapped_column(String(24))  # answer | exercise | daily | streak
+    amount: Mapped[int] = mapped_column(Integer)
+    label: Mapped[str] = mapped_column(String(200), default="")
+    retro: Mapped[int] = mapped_column(Integer, default=0)
+    notified: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+    awarded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class UserBadge(Base):
+    """A badge a learner has earned (badge keys are defined in app/services/xp.py)."""
+
+    __tablename__ = "user_badges"
+    __table_args__ = (UniqueConstraint("user_id", "badge", name="uq_user_badge"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    badge: Mapped[str] = mapped_column(String(32))
+    retro: Mapped[int] = mapped_column(Integer, default=0)
+    notified: Mapped[int] = mapped_column(Integer, default=0)
+    earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class LearnerProfile(Base):
+    """How a learner appears on the leaderboard. Never holds an email.
+
+    ``handle`` is a generated, non-identifying name (e.g. "Swift Parser 42").
+    ``visibility``: "handle" (default), "name" (their display name, opt-in),
+    "anonymous" (shown as "Anonymous learner") or "hidden" (left off the board).
+    """
+
+    __tablename__ = "learner_profiles"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    handle: Mapped[str] = mapped_column(String(40), unique=True)
+    visibility: Mapped[str] = mapped_column(String(16), default="handle")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

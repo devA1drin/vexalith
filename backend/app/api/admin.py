@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.session import get_db
-from app.models.models import DailyCompletion, ExerciseAttempt, ExerciseHelp, Feedback, HintUsage, QuestionSkip, Response, SkillMastery, User, UserFeedback
+from app.models.models import DailyCompletion, ExerciseAttempt, ExerciseHelp, Feedback, HintUsage, LearnerProfile, QuestionSkip, Response, SkillMastery, User, UserBadge, UserFeedback, XpEvent
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -53,6 +53,8 @@ def purge_users(body: PurgeRequest, db: Session = Depends(get_db)) -> dict:
             "daily": len(list(db.scalars(select(DailyCompletion.id).where(DailyCompletion.user_id == user.id)))),
             "exercise_attempts": len(list(db.scalars(select(ExerciseAttempt.id).where(ExerciseAttempt.user_id == user.id)))),
             "exercise_help": len(list(db.scalars(select(ExerciseHelp.id).where(ExerciseHelp.user_id == user.id)))),
+            "xp_events": len(list(db.scalars(select(XpEvent.id).where(XpEvent.user_id == user.id)))),
+            "badges": len(list(db.scalars(select(UserBadge.id).where(UserBadge.user_id == user.id)))),
         }
         if not body.dry_run:
             if resp_ids:
@@ -65,6 +67,9 @@ def purge_users(body: PurgeRequest, db: Session = Depends(get_db)) -> dict:
             db.execute(delete(DailyCompletion).where(DailyCompletion.user_id == user.id))
             db.execute(delete(ExerciseAttempt).where(ExerciseAttempt.user_id == user.id))
             db.execute(delete(ExerciseHelp).where(ExerciseHelp.user_id == user.id))
+            db.execute(delete(XpEvent).where(XpEvent.user_id == user.id))
+            db.execute(delete(UserBadge).where(UserBadge.user_id == user.id))
+            db.execute(delete(LearnerProfile).where(LearnerProfile.user_id == user.id))
             db.execute(delete(User).where(User.id == user.id))
         report.append({"identity": ident, "found": True, "name": user.display_name, **counts})
     if not body.dry_run:

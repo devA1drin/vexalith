@@ -8,6 +8,8 @@ import { CountUp } from "@/components/CountUp";
 import { Recommendations } from "@/components/Recommendations";
 import { TrendChart } from "@/components/TrendChart";
 import { PageIntro } from "@/components/PageIntro";
+import { RanksTabs } from "@/components/RanksTabs";
+import { ProgressLevel } from "@/components/ProgressLevel";
 
 export default function ProgressPage() {
   const [data, setData] = useState<ProgressOut | null>(null);
@@ -29,6 +31,8 @@ export default function ProgressPage() {
         </div>
         <Link href="/practice" className="btn-primary">Continue <span className="btn-arrow">→</span></Link>
       </div>
+      <RanksTabs />
+      <ProgressLevel />
       <PageIntro>
         <span className="text-ink-100">Mastery</span> (0-100) goes up when you answer a skill well and down a little when you
         miss, so the lowest bar is the best thing to practise next.

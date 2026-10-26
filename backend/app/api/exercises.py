@@ -22,6 +22,7 @@ from app.content.exercise_guides import commented_solution, explanation_for, hin
 from app.content.exercises import BY_SLUG, COMING_SOON_LANGUAGES, EXERCISES, RUNNABLE_LANGUAGES
 from app.db.session import get_db
 from app.models.models import ExerciseAttempt, ExerciseHelp, User
+from app.services.xp import safe_sync
 
 router = APIRouter(prefix="/exercises", tags=["exercises"])
 
@@ -166,6 +167,8 @@ def submit(slug: str, body: SubmitIn, user: User = Depends(get_current_user), db
     db.add(ExerciseAttempt(user_id=user.id, slug=slug, language=e["language"], passed=passed, total=len(tests), code=body.code))
     db.commit()
     solved = passed == len(tests)
+    if solved:
+        safe_sync(db, user)
     return {
         "slug": slug, "passed": passed, "total": len(tests), "solved": solved,
         # After a pass the explanation and reference solution are shown for comparison.

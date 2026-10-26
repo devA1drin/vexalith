@@ -187,6 +187,46 @@ export type SubmitOut = {
   help: ExerciseHelp;
 };
 
+export type LevelInfo = {
+  xp: number;
+  level: number;
+  level_name: string;
+  next_level_name: string;
+  level_floor: number;
+  next_level_at: number;
+  to_next: number;
+  /** 0..1 of the way from this level to the next. */
+  progress: number;
+};
+export type BadgeGroup = "answers" | "streaks" | "languages" | "code";
+export type BadgeOut = { key: string; name: string; description: string; group: BadgeGroup; earned: boolean; earned_at: string | null };
+export type XpOut = LevelInfo & {
+  xp_this_week: number;
+  badges: BadgeOut[];
+  badges_earned: number;
+  recent: { label: string; amount: number; kind: string; created_at: string }[];
+};
+/** What the learner hasn't been told about yet (shown once as a toast). */
+export type XpNews = {
+  xp: number;
+  /** True when this counts work done before XP existed. */
+  retro: boolean;
+  items: { label: string; amount: number }[];
+  badges: { key: string; name: string; description: string }[];
+};
+export type XpSyncOut = LevelInfo & { news: XpNews };
+export type Visibility = "handle" | "name" | "anonymous" | "hidden";
+export type LeaderboardEntry = { rank: number; name: string; xp: number; level: number; level_name: string; is_you: boolean };
+export type LeaderboardOut = {
+  period: "week" | "all";
+  entries: LeaderboardEntry[];
+  you: { rank: number | null; xp: number; name: string; level: number; level_name: string; visibility: Visibility; in_top: boolean };
+  ranked: number;
+  week_start?: string;
+  week_end?: string;
+};
+export type XpProfile = { visibility: Visibility; handle: string; shown_as: string | null; name_available: boolean; name: string | null };
+
 export class ApiError extends Error {
   constructor(message: string, public status: number) {
     super(message);
@@ -249,6 +289,12 @@ export const api = {
   submitExercise: (slug: string, code: string, results: { output: string | null; error: string | null }[]) =>
     request<SubmitOut>(`/exercises/${encodeURIComponent(slug)}/submit`, { method: "POST", body: JSON.stringify({ code, results }) }),
   exerciseHint: (slug: string) => request<ExerciseHelp>(`/exercises/${encodeURIComponent(slug)}/hints`, { method: "POST", body: "{}" }),
+  xp: () => request<XpOut>("/xp"),
+  xpSync: () => request<XpSyncOut>("/xp/sync", { method: "POST", body: "{}" }),
+  leaderboard: (period: "week" | "all") => request<LeaderboardOut>(`/leaderboard?period=${period}`),
+  xpProfile: () => request<XpProfile>("/xp/profile"),
+  setVisibility: (visibility: Visibility) => request<XpProfile>("/xp/profile", { method: "PUT", body: JSON.stringify({ visibility }) }),
+  newHandle: () => request<XpProfile>("/xp/profile/handle", { method: "POST", body: "{}" }),
   revealSolution: (slug: string, confirm: boolean) =>
     request<ExerciseHelp>(`/exercises/${encodeURIComponent(slug)}/solution`, { method: "POST", body: JSON.stringify({ confirm }) }),
 };

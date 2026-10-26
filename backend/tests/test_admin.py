@@ -17,6 +17,7 @@ def test_admin_purge(client, monkeypatch):
     client.post(f"/api/questions/{q['id']}/skip?language=python", headers=h)
     client.post("/api/responses", json={"question_id": q["id"], "answer_text": "Because the loop exits early on empty input."}, headers=h)
     assert client.post("/api/feedback", json={"rating": 4, "category": "other", "message": "purge test entry"}, headers=h).status_code == 201
+    assert client.get("/api/xp", headers=h).status_code == 200  # creates the leaderboard profile
 
     assert client.post("/api/admin/purge-users", json={"identities": ["github:purge-me"]}, headers={"X-Admin-Token": "wrong"}).status_code == 403
     dry = client.post("/api/admin/purge-users", json={"identities": ["github:purge-me"]}, headers={"X-Admin-Token": TOKEN}).json()
@@ -25,5 +26,12 @@ def test_admin_purge(client, monkeypatch):
     assert real["users"][0]["found"] and real["users"][1]["found"] is False
     wall = client.get("/api/feedback/recent").json()
     assert all(f["message"] != "purge test entry" for f in wall)
+    from app.db.session import SessionLocal
+    from app.models.models import LearnerProfile, User, UserBadge, XpEvent
+    with SessionLocal() as db:
+        assert db.query(User).filter_by(provider_account_id="purge-me").count() == 0
+        live = {u for (u,) in db.query(User.id).all()}
+        for model in (LearnerProfile, XpEvent, UserBadge):
+            assert {u for (u,) in db.query(model.user_id).all()} <= live  # nothing left behind
     again = client.post("/api/admin/purge-users", json={"identities": ["github:purge-me"]}, headers={"X-Admin-Token": TOKEN}).json()
     assert again["users"][0]["found"] is False
