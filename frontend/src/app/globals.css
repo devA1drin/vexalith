@@ -136,3 +136,7 @@ body {
   .overflow-fill { width: 127%; }
   .overflow-count::after { content: "127%"; }
 }
+
+/* ---------- Run output: indeterminate loading bar ---------- */
+@keyframes vx-indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+@media (prefers-reduced-motion: reduce) { [data-testid="run-loading"] * { animation-duration: 3s !important; } }
