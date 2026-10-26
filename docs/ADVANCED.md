@@ -39,6 +39,9 @@ Browser ──► Next.js 15 (Vercel)                         FastAPI (Vercel Py
 | GET / POST | `/api/xp` (level, badges, recent XP) · `/api/xp/sync` (count new work, return what to toast once) | JWT |
 | GET | `/api/leaderboard?period=week\|all` (top 50 + your rank; weeks start Monday 00:00 Asia/Manila; never emails) | JWT |
 | GET / PUT / POST | `/api/xp/profile` `{visibility: handle\|name\|anonymous\|hidden}` · `/api/xp/profile/handle` (new random handle) | JWT |
+| GET | `/api/paths` (every learning path with progress, plus the step to continue) · `/api/paths/{slug}` (one path, each step locked / open / done) | JWT |
+| GET | `/api/paths/{slug}/steps/{n}/next?exclude=1,2` (an adaptive question from that step; answer it with `POST /api/responses`) | JWT |
+| POST | `/api/paths/{slug}/steps/{n}/skip-ahead` (open a locked step early; remembered in `path_skips`) | JWT |
 | POST / GET | `/api/feedback` · `/api/feedback/mine` | JWT |
 | GET | `/api/feedback/recent` | public (no emails) |
 | GET | `/api/languages` · `/api/domains` · `/api/catalog` (question counts per language and kind, no content) | public |
