@@ -42,11 +42,18 @@ Browser ──► Next.js 15 (Vercel)                         FastAPI (Vercel Py
 | GET | `/api/paths` (every learning path with progress, plus the step to continue) · `/api/paths/{slug}` (one path, each step locked / open / done) | JWT |
 | GET | `/api/paths/{slug}/steps/{n}/next?exclude=1,2` (an adaptive question from that step; answer it with `POST /api/responses`) | JWT |
 | POST | `/api/paths/{slug}/steps/{n}/skip-ahead` (open a locked step early; remembered in `path_skips`) | JWT |
+| GET | `/api/review?topic=&language=&path=&difficulty=&kind=question\|exercise` (mistakes to fix or check again, coming-back dates, filter options, counts) | JWT |
+| POST | `/api/review/questions/{id}/retry` · `/api/review/exercises/{slug}/retry` (start a Review retry; needed for fix XP) | JWT |
+| GET | `/api/quiz/options` (scopes with 5+ questions, the running quiz, rules) · `/api/quiz/history` (past quizzes, best per scope) | JWT |
+| POST | `/api/quiz` `{scope: language\|topic\|path\|mixed, value, length: 5\|10\|20, minutes: 5\|10\|15, instant}` (409 + `quiz_id` if one is running) | JWT |
+| GET | `/api/quiz/{id}` (state: deadline, server time, slots, questions) · `/api/quiz/{id}/results` | JWT |
+| POST | `/api/quiz/{id}/answer` `{position, answer_text}` · `/api/quiz/{id}/skip` `{position}` · `/api/quiz/{id}/finish` (returns results) | JWT |
 | POST / GET | `/api/feedback` · `/api/feedback/mine` | JWT |
 | GET | `/api/feedback/recent` | public (no emails) |
 | GET | `/api/languages` · `/api/domains` · `/api/catalog` (question counts per language and kind, no content) | public |
 
 - `language` is one of `python`, `javascript`, `php`, `cpp` (C++), `html`, `css` or `general`. `focus` is optional and currently accepts only `fundamentals`.
+- Review and quiz rules: an item is fixed by a right answer after a Review retry; it returns once `CONFIRM_DAYS` (3) later. Quizzes store `started_at` / `deadline_at` on the server and accept answers for 15 s after the deadline (`GRACE_S`) to absorb the auto-submit; later reads finish the quiz automatically. While an "at the end" quiz is running, its answers are left out of XP, Review and path progress so the header's XP toast can't give results away. Tables `quiz_sessions`, `quiz_answers` and `review_retries` are created on startup (additive).
 - `scripts/smoke_api.sh` mints a test token from `BACKEND_JWT_SECRET` and runs the whole flow against a running API.
 - `POST /api/admin/purge-users` deletes specific users (by `provider:account_id`) and everything they own. It returns 404 unless the sensitive `ADMIN_TOKEN` env var (32+ characters) is set, and it needs that token in the `X-Admin-Token` header. Requests default to a dry run. Remove `ADMIN_TOKEN` after use.
 
