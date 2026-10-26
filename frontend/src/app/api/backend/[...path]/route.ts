@@ -10,7 +10,7 @@ import { backendUrl, mintBackendToken } from "@/lib/backend";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type Rule = { method: "GET" | "POST"; pattern: RegExp; public?: boolean };
+type Rule = { method: "GET" | "POST" | "PUT"; pattern: RegExp; public?: boolean };
 
 const RULES: Rule[] = [
   { method: "GET", pattern: /^me$/ },
@@ -29,6 +29,12 @@ const RULES: Rule[] = [
   { method: "GET", pattern: /^exercises$/ },
   { method: "GET", pattern: /^exercises\/[a-z0-9-]{1,64}$/ },
   { method: "POST", pattern: /^exercises\/[a-z0-9-]{1,64}\/(submit|hints|solution)$/ },
+  { method: "GET", pattern: /^xp$/ },
+  { method: "POST", pattern: /^xp\/sync$/ },
+  { method: "GET", pattern: /^xp\/profile$/ },
+  { method: "PUT", pattern: /^xp\/profile$/ },
+  { method: "POST", pattern: /^xp\/profile\/handle$/ },
+  { method: "GET", pattern: /^leaderboard$/ },
   { method: "GET", pattern: /^feedback\/recent$/, public: true },
   { method: "GET", pattern: /^(languages|domains|health)$/, public: true },
 ];
@@ -55,7 +61,7 @@ async function forward(req: NextRequest, path: string[]) {
   }
 
   let body: string | undefined;
-  if (req.method === "POST") {
+  if (req.method === "POST" || req.method === "PUT") {
     body = await req.text();
     if (body.length > 20_000) {
       return NextResponse.json({ detail: "Payload too large" }, { status: 413, headers: NO_STORE });
@@ -81,5 +87,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ path: strin
 }
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return forward(req, (await ctx.params).path);
+}
+
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   return forward(req, (await ctx.params).path);
 }
