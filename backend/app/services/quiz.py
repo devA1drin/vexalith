@@ -127,7 +127,7 @@ def options(db: Session, user: User, now: datetime | None = None) -> dict:
         if n >= MIN_POOL:
             path_opts.append({"value": p.slug, "label": p.name, "count": n})
     active = active_quiz(db, user, now)
-    return {
+    out = {
         "scopes": {
             "topic": [{"value": s, "label": n, "count": c} for s, (n, c) in topics.items() if c >= MIN_POOL],
             "language": [{"value": lang["slug"], "label": lang["name"], "count": langs.get(lang["slug"], 0)}
@@ -140,6 +140,10 @@ def options(db: Session, user: User, now: datetime | None = None) -> dict:
         "active": _brief(active, now) if active else None,
         "rules": rules(),
     }
+    from app.services import profile
+
+    out["defaults"] = profile.quiz_defaults(db, user, out)  # the learner's own picks from their profile
+    return out
 
 
 def rules() -> dict:
