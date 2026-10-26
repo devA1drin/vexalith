@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.session import get_db
-from app.models.models import DailyCompletion, ExerciseAttempt, ExerciseHelp, Feedback, HintUsage, LearnerProfile, PathActivity, PathSkip, QuestionSkip, Response, SkillMastery, User, UserBadge, UserFeedback, XpEvent
+from app.models.models import DailyCompletion, ExerciseAttempt, ExerciseHelp, Feedback, HintUsage, LearnerProfile, PathActivity, PathSkip, QuestionSkip, QuizAnswer, QuizSession, Response, ReviewRetry, SkillMastery, User, UserBadge, UserFeedback, XpEvent
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -57,10 +57,16 @@ def purge_users(body: PurgeRequest, db: Session = Depends(get_db)) -> dict:
             "badges": len(list(db.scalars(select(UserBadge.id).where(UserBadge.user_id == user.id)))),
             "path_activity": len(list(db.scalars(select(PathActivity.id).where(PathActivity.user_id == user.id)))),
             "path_skips": len(list(db.scalars(select(PathSkip.id).where(PathSkip.user_id == user.id)))),
+            "quizzes": len(list(db.scalars(select(QuizSession.id).where(QuizSession.user_id == user.id)))),
+            "review_retries": len(list(db.scalars(select(ReviewRetry.id).where(ReviewRetry.user_id == user.id)))),
         }
         if not body.dry_run:
             if resp_ids:
                 db.execute(delete(Feedback).where(Feedback.response_id.in_(resp_ids)))
+            # Quiz answers point at responses, so they go first.
+            db.execute(delete(QuizAnswer).where(QuizAnswer.user_id == user.id))
+            db.execute(delete(QuizSession).where(QuizSession.user_id == user.id))
+            db.execute(delete(ReviewRetry).where(ReviewRetry.user_id == user.id))
             db.execute(delete(Response).where(Response.user_id == user.id))
             db.execute(delete(QuestionSkip).where(QuestionSkip.user_id == user.id))
             db.execute(delete(SkillMastery).where(SkillMastery.user_id == user.id))
