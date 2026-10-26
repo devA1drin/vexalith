@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links: { href: string; label: string; n: string; also?: string[] }[] = [
+  { href: "/paths", label: "Paths", n: "00" },
   { href: "/practice", label: "Practice", n: "01" },
   { href: "/code", label: "Code", n: "02" },
   { href: "/daily", label: "Daily", n: "03" },
