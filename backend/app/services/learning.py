@@ -536,7 +536,7 @@ def get_progress(db: Session, user: User, now: datetime | None = None) -> Progre
     current, best = daily.streaks(set(days_done), today)
     return ProgressOut(
         user_id=user.id,
-        display_name=user.display_name,
+        display_name=_shown_name(db, user),
         domains=domain_rows,
         languages=languages,
         fundamentals=fundamentals_status(db, user),
@@ -557,3 +557,11 @@ def get_progress(db: Session, user: User, now: datetime | None = None) -> Progre
         daily_done_today=today in days_done,
         daily_completed=len(days_done),
     )
+
+
+def _shown_name(db: Session, user: User) -> str:
+    """The name chosen on the profile page, else the sign-in name."""
+    from app.models.models import UserSettings
+
+    st = db.get(UserSettings, user.id)
+    return st.display_name if st is not None and st.display_name else user.display_name

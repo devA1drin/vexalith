@@ -297,6 +297,8 @@ class PublicFeedbackOut(BaseModel):
     id: int
     author_name: str
     author_avatar_url: str | None
+    # A generated mark the author picked on their profile (shown instead of their photo).
+    author_avatar: str | None = None
     rating: int
     category: str
     message: str
