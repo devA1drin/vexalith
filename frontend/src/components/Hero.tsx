@@ -45,7 +45,7 @@ export function Hero({ ctaHref, signedIn }: { ctaHref: string; signedIn: boolean
             </span>
           </h1>
 
-          <div className="mt-8 max-w-md" aria-hidden="true">
+          <div className="mt-8 max-w-md max-sm:w-[78%]" aria-hidden="true">
             <div className="mb-1.5 flex justify-between font-mono text-[11px] uppercase tracking-widest text-ink-400">
               <span>reasoning.capacity</span>
               <span className="overflow-count text-accent" />
