@@ -14,6 +14,8 @@ XP rules
 - Daily challenge done: +15 per day.
 - Streak bonus: +5 for each day the streak has run before today, up to +30 (day 2 = +5, day 7+ = +30).
 - Learning paths: +25 for each step done, +100 for finishing a path (see app/services/paths.py).
+- Mistake review: +5 the first time each mistake is fixed (once per item, ever; see services/review.py).
+- Timed quiz: +3 extra for a question whose first correct answer was in a quiz (see services/quiz.py).
 
 Levels: reaching level L takes 50 × L × (L − 1) XP in total (100, 300, 600, 1000, ...).
 """
@@ -31,6 +33,7 @@ from sqlalchemy.orm import Session
 
 from app.content.exercises import BY_SLUG
 from app.models.models import (
+    AppMeta,
     DailyCompletion,
     ExerciseAttempt,
     ExerciseHelp,
@@ -99,7 +102,7 @@ class Badge:
     key: str
     name: str
     description: str
-    group: str  # answers | streaks | languages | code | paths
+    group: str  # answers | streaks | languages | code | paths | review
 
 
 BADGES: list[Badge] = [
@@ -130,9 +133,16 @@ PATH_BADGES: list[Badge] = [
     Badge("path-finisher", "Path Finisher", "Finish every step of a learning path.", "paths"),
     Badge("path-three", "Wayfinder", "Finish three learning paths.", "paths"),
 ]
-ALL_BADGES: list[Badge] = BADGES + PATH_BADGES
+# Mistake review and timed quiz badges.
+REVIEW_BADGES: list[Badge] = [
+    Badge("second-look", "Second Look", "Fix 10 mistakes from Review mistakes.", "review"),
+    Badge("beat-the-clock", "Beat the Clock", "Score 80% or more on a timed quiz of 10 or more questions.", "review"),
+]
+ALL_BADGES: list[Badge] = BADGES + PATH_BADGES + REVIEW_BADGES
 BADGE_BY_KEY = {b.key: b for b in ALL_BADGES}
 PATH_KINDS = ("path_step", "path")
+REVIEW_KINDS = ("fix", "quiz")
+REVIEW_BADGE_KEYS = {b.key for b in REVIEW_BADGES}
 
 
 # ----------------------------------------------------------------------------- time helpers
@@ -180,9 +190,14 @@ def compute(db: Session, user: User, now: datetime | None = None) -> Earned:
     out = Earned()
     now = _aware(now)
 
-    # Answers: the first correct answer to each question.
+    # Answers: the first correct answer to each question (answers in a quiz that's still
+    # hiding its results don't count until it ends).
+    from app.services import quiz, review
+
+    hidden = review.hidden_response_ids(db, user.id, now)
+    first_correct: dict[int, tuple[int, datetime, str]] = {}
     rows = (
-        db.query(Response.question_id, Response.created_at, Feedback.details,
+        db.query(Response.id, Response.question_id, Response.created_at, Feedback.details,
                  Question.language, Question.difficulty, Question.title, SkillDomain.slug)
         .join(Feedback, Feedback.response_id == Response.id)
         .join(Question, Question.id == Response.question_id)
@@ -192,9 +207,9 @@ def compute(db: Session, user: User, now: datetime | None = None) -> Earned:
         .all()
     )
     correct_times: list[datetime] = []
-    for qid, created, details, lang, diff, title, domain in rows:
+    for rid, qid, created, details, lang, diff, title, domain in rows:
         details = details or {}
-        if details.get("verdict") != "correct":
+        if details.get("verdict") != "correct" or rid in hidden:
             continue
         when = _aware(created)
         key = f"answer:{qid}"
@@ -206,6 +221,7 @@ def compute(db: Session, user: User, now: datetime | None = None) -> Earned:
         amount = _cut(base, min(HINT_CUT_MAX, HINT_CUT * hints_used)) if hints_used else base
         label = f"Correct: {title}" + (f" ({hints_used} hint{'s' if hints_used != 1 else ''})" if hints_used else "")
         out.events[key] = ("answer", amount, label[:200], when)
+        first_correct[qid] = (rid, when, title)
         correct_times.append(when)
         if d == "advanced":
             out.badge("advanced", when)
@@ -300,6 +316,12 @@ def compute(db: Session, user: User, now: datetime | None = None) -> Earned:
     out.events.update(path_events)
     for key, when in path_badges.items():
         out.badge(key, when)
+
+    # Mistake review fixes and timed quizzes.
+    for events, badges in (review.awards(db, user), quiz.awards(db, user, first_correct)):
+        out.events.update(events)
+        for key, when in badges.items():
+            out.badge(key, when)
     return out
 
 
@@ -385,18 +407,26 @@ def sync_user(db: Session, user: User, now: datetime | None = None) -> SyncResul
     # Path awards for work done before paths existed are past work too, even for known learners.
     from app.services import paths
 
-    launch = paths.launched_at(db)
+    # Likewise review fixes made before mistake review existed.
+    launches = {"paths": paths.launched_at(db), "review": launched_at(db, REVIEW_LAUNCH_KEY)}
 
-    def is_retro(path_award: bool, when: datetime) -> int:
-        return 1 if retro or (path_award and launch is not None and _aware(when) < launch) else 0
+    def is_retro(feature: str | None, when: datetime) -> int:
+        launch = launches.get(feature) if feature else None
+        return 1 if retro or (launch is not None and _aware(when) < launch) else 0
+
+    def event_feature(kind: str) -> str | None:
+        return "paths" if kind in PATH_KINDS else "review" if kind in REVIEW_KINDS else None
+
+    def badge_feature(key: str) -> str | None:
+        return "paths" if key.startswith("path-") else "review" if key in REVIEW_BADGE_KEYS else None
 
     new_events = [
         XpEvent(user_id=user.id, key=key, kind=kind, amount=amount, label=label,
-                retro=is_retro(kind in PATH_KINDS, when), created_at=when, awarded_at=stamp)
+                retro=is_retro(event_feature(kind), when), created_at=when, awarded_at=stamp)
         for key, (kind, amount, label, when) in earned.events.items() if key not in have
     ]
     new_badges = [
-        UserBadge(user_id=user.id, badge=key, retro=is_retro(key.startswith("path-"), when), earned_at=when)
+        UserBadge(user_id=user.id, badge=key, retro=is_retro(badge_feature(key), when), earned_at=when)
         for key, when in earned.badges.items() if key not in have_badges and key in BADGE_BY_KEY
     ]
     db.add_all(new_events + new_badges)
@@ -406,6 +436,27 @@ def sync_user(db: Session, user: User, now: datetime | None = None) -> SyncResul
         db.rollback()
         return SyncResult([], [])
     return SyncResult(new_events, new_badges)
+
+
+REVIEW_LAUNCH_KEY = "review_launched_at"
+
+
+def launched_at(db: Session, key: str) -> datetime | None:
+    """When a feature went live on this database (awards for older work are "past work")."""
+    meta = db.get(AppMeta, key)
+    try:
+        return _aware(datetime.fromisoformat(meta.value)) if meta else None
+    except ValueError:
+        return None
+
+
+def mark_launch(db: Session, key: str) -> None:
+    if db.get(AppMeta, key) is None:
+        db.add(AppMeta(key=key, value=datetime.now(timezone.utc).isoformat()))
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
 
 
 def safe_sync(db: Session, user: User) -> None:

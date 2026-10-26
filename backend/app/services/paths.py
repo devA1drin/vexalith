@@ -150,14 +150,17 @@ class PathState:
 
 
 def _history(db: Session, user: User) -> list[tuple[int, datetime, float]]:
+    from app.services.review import hidden_response_ids
+
+    hidden = hidden_response_ids(db, user.id)  # answers in a quiz that's still hiding its results
     rows = (
-        db.query(Response.question_id, Response.created_at, Feedback.overall_score)
+        db.query(Response.id, Response.question_id, Response.created_at, Feedback.overall_score)
         .join(Feedback, Feedback.response_id == Response.id)
         .filter(Response.user_id == user.id)
         .order_by(Response.created_at.asc(), Response.id.asc())
         .all()
     )
-    return [(qid, _aware(created), float(score or 0.0)) for qid, created, score in rows]
+    return [(qid, _aware(created), float(score or 0.0)) for rid, qid, created, score in rows if rid not in hidden]
 
 
 def _passes(db: Session, user: User) -> dict[str, datetime]:
