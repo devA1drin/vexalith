@@ -370,15 +370,23 @@ def state(db: Session, user: User, quiz: QuizSession, now: datetime | None = Non
         current = next((s for s in slots if not s.answer_text), None)
         returning = current is not None
     question = None
-    if quiz.status == "active" and current is not None:
-        q = db.get(Question, current.question_id)
-        question = _question_out(q, db.get(SkillDomain, q.domain_id)).model_dump(mode="json")
+    questions: list[dict] = []
+    if quiz.status == "active":
+        # Every question comes with the state, so the page can move on without waiting for grading.
+        rows = {
+            q.id: (q, d) for q, d in db.query(Question, SkillDomain).join(SkillDomain, SkillDomain.id == Question.domain_id)
+            .filter(Question.id.in_([s.question_id for s in slots])).all()
+        }
+        questions = [_question_out(*rows[s.question_id]).model_dump(mode="json") if s.question_id in rows else None for s in slots]
+        if current is not None:
+            question = questions[current.position]
     out = _brief(quiz, now)
     out.update({
         "server_now": now,
         "current": current.position if (current is not None and quiz.status == "active") else None,
         "returning": returning,
         "question": question,
+        "questions": questions,
         "slots": [
             {
                 "position": s.position,
