@@ -67,6 +67,28 @@ const CPP_TYPES: Record<string, (v: unknown) => string> = {
   "str[]": (v) => `std::vector<std::string>{${(v as string[]).map((s) => JSON.stringify(s)).join(", ")}}`,
 };
 
+/**
+ * Common headers go in front of the learner's code (so `cout` works even without
+ * `#include <iostream>`), then `#line 1` keeps compiler line numbers on their code.
+ */
+const CPP_PRELUDE = `#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <map>
+#include <string>
+#include <vector>
+`;
+
+/** True when the code has its own entry point: `int main(` (comments ignored). */
+export function hasCppMain(code: string): boolean {
+  return /\bint\s+main\s*\(/.test(stripComments(code));
+}
+
+/** The learner's whole program, compiled as it is (for "Run my code"). */
+export function cppSource(code: string): string {
+  return `${CPP_PRELUDE}#line 1 "main.cpp"\n${code}\n`;
+}
+
 export function cppProgram(code: string, fn: string, sig: Signature, tests: TestInput[]): string {
   const calls = tests
     .map((t, i) => {
@@ -74,11 +96,11 @@ export function cppProgram(code: string, fn: string, sig: Signature, tests: Test
       return `  std::cout << "\\001VX|B|${i}" << std::endl;\n  { auto vx_r = ${fn}(${args}); std::cout << "\\n\\001VX|R|${i}|" << vx_::j(vx_r) << std::endl; }`;
     })
     .join("\n");
-  return `${code}
-#include <iostream>
-#include <map>
-#include <string>
-#include <vector>
+  // A learner's own main() is renamed out of the way so the tests can still call their function.
+  return `${CPP_PRELUDE}#define main vx_learner_main
+#line 1 "main.cpp"
+${code}
+#undef main
 namespace vx_ {
 inline std::string j(const std::string& s) {
   std::string o = "\\"";
@@ -265,17 +287,39 @@ function splitTopLevel(s: string, sep: string): string[] {
   return parts;
 }
 
-export function javaMain(fn: string, sig: Signature, tests: TestInput[], timeoutMs: number, outFile: string): string {
-  const blocks = tests
-    .map((t, i) => {
-      const args = t.args.map((a, k) => JAVA_TYPES[sig.params[k]](a)).join(", ");
-      return `    vxRun(${i}, () -> Solution.${fn}(${args}));`;
-    })
-    .join("\n");
-  return `import java.io.*;
-import java.util.*;
+/** Blank out comments and string/char literals (same length), so regexes only see code. */
+function stripComments(src: string): string {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/\/\/[^\n]*/g, (m) => " ".repeat(m.length))
+    .replace(/"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'/g, (m) => " ".repeat(m.length));
+}
 
-class VxTimeout extends RuntimeException {}
+export type JavaLayout = {
+  /** File the learner's code is saved as: javac needs `public class X` to live in X.java. */
+  file: string;
+  /** Class that declares the exercise method, if any. */
+  target: string | null;
+  /** Class with `static void main(String…)`, if any. */
+  mainClass: string | null;
+};
+
+/** Work out the file name, the class holding the method, and the class with main(). */
+export function javaLayout(code: string, fn?: string): JavaLayout {
+  const src = stripComments(code);
+  const classes = [...src.matchAll(/\b(?:class|interface|enum|record)\s+([A-Za-z_$][\w$]*)/g)].map((m) => ({ name: m[1], at: m.index ?? 0 }));
+  const owner = (at: number) => classes.filter((c) => c.at < at).pop()?.name ?? null;
+  const pub = /\bpublic\s+(?:(?:final|abstract|static)\s+)*(?:class|interface|enum|record)\s+([A-Za-z_$][\w$]*)/.exec(src);
+  let target: string | null = null;
+  if (fn) {
+    const decl = new RegExp(`[\\w$>\\]]\\s+${fn}\\s*\\([^)]*\\)\\s*(?:throws[^{;]*)?\\{`).exec(src);
+    if (decl) target = owner(decl.index);
+  }
+  const main = /\bstatic\s+(?:final\s+)?void\s+main\s*\(/.exec(src) ?? /\bvoid\s+static\s+main\s*\(/.exec(src);
+  return { file: `${pub ? pub[1] : "Solution"}.java`, target, mainClass: main ? owner(main.index) : null };
+}
+
+const JAVA_GUARD = `class VxTimeout extends RuntimeException {}
 
 class VxGuard {
   static long deadline = Long.MAX_VALUE;
@@ -283,14 +327,24 @@ class VxGuard {
     if (System.currentTimeMillis() > deadline) throw new VxTimeout();
     return true;
   }
-}
+}`;
 
-public class Main {
-  interface Call { Object call() throws Throwable; }
-  static StringBuilder res = new StringBuilder();
-  static PrintStream realOut = System.out;
+/**
+ * Where an exception happened in the learner's code: "(line N)" when the JVM knows
+ * it, otherwise "(in Class.method)" (CheerpJ doesn't keep line numbers).
+ */
+const javaWhere = (file: string) => `  static String vxWhere(Throwable e) {
+    for (StackTraceElement f : e.getStackTrace()) {
+      if (${JSON.stringify(file)}.equals(f.getFileName()) && f.getLineNumber() > 0) return " (line " + f.getLineNumber() + ")";
+      String c = f.getClassName();
+      if (!c.startsWith("Vx") && !c.startsWith("java.") && !c.startsWith("javax.") && !c.startsWith("sun.") && !c.startsWith("jdk.")) {
+        return " (in " + c + "." + f.getMethodName() + ")";
+      }
+    }
+    return "";
+  }`;
 
-  static String q(String s) {
+const JAVA_QUOTE = `  static String q(String s) {
     StringBuilder b = new StringBuilder("\\"");
     for (char c : s.toCharArray()) {
       if (c == '"' || c == '\\\\') b.append('\\\\').append(c);
@@ -299,7 +353,35 @@ public class Main {
       else b.append(c);
     }
     return b.append('"').toString();
-  }
+  }`;
+
+export function javaMain(
+  fn: string,
+  sig: Signature,
+  tests: TestInput[],
+  timeoutMs: number,
+  outFile: string,
+  target = "Solution",
+  file = "Solution.java",
+): string {
+  const blocks = tests
+    .map((t, i) => {
+      const args = t.args.map((a, k) => JAVA_TYPES[sig.params[k]](a)).join(", ");
+      return `    vxRun(${i}, () -> ${target}.${fn}(${args}));`;
+    })
+    .join("\n");
+  return `import java.io.*;
+import java.util.*;
+
+${JAVA_GUARD}
+
+public class VxMain {
+${javaWhere(file)}
+  interface Call { Object call() throws Throwable; }
+  static StringBuilder res = new StringBuilder();
+  static PrintStream realOut = System.out;
+
+${JAVA_QUOTE}
 
   static String j(Object o) {
     if (o == null) return "null";
@@ -353,9 +435,7 @@ public class Main {
       error = "StackOverflowError: your method calls itself too many times. Is there a base case that stops the recursion?";
     } catch (Throwable e) {
       error = e.toString();
-      for (StackTraceElement f : e.getStackTrace()) {
-        if ("Solution.java".equals(f.getFileName())) { error += " (line " + f.getLineNumber() + ")"; break; }
-      }
+      error += vxWhere(e);
     }
     VxGuard.deadline = Long.MAX_VALUE;
     System.setOut(realOut);
@@ -376,16 +456,90 @@ ${blocks}
 `;
 }
 
-export function javaCompileMessage(text: string): string {
-  if (/class Main|Main\.java/.test(text) && !/Solution\.java/.test(text)) {
-    return "Something in your code clashes with the test runner. Keep your code inside class Solution and don't add a class named Main.";
+/**
+ * Runs the learner's main() with typed input on System.in and the output captured.
+ * System.exit() is turned into a normal stop so the output isn't lost.
+ */
+export function javaProgram(mainClass: string, stdin: string, timeoutMs: number, outFile: string, file: string): string {
+  return `import java.io.*;
+import java.util.*;
+
+${JAVA_GUARD}
+
+class VxExit extends SecurityException {
+  final int code;
+  VxExit(int code) { this.code = code; }
+}
+
+public class VxProgram {
+${JAVA_QUOTE}
+${javaWhere(file)}
+
+  public static void main(String[] args) throws Exception {
+    ByteArrayOutputStream out = new ByteArrayOutputStream(), err = new ByteArrayOutputStream();
+    PrintStream realOut = System.out, realErr = System.err;
+    System.setIn(new ByteArrayInputStream(${JSON.stringify(stdin)}.getBytes("UTF-8")));
+    System.setOut(new PrintStream(out, true, "UTF-8"));
+    System.setErr(new PrintStream(err, true, "UTF-8"));
+    try {
+      System.setSecurityManager(new SecurityManager() {
+        @Override public void checkExit(int status) { throw new VxExit(status); }
+        @Override public void checkPermission(java.security.Permission p) {}
+        @Override public void checkPermission(java.security.Permission p, Object ctx) {}
+      });
+    } catch (Throwable ignored) {}
+    String error = null, kind = null;
+    int exit = 0;
+    VxGuard.deadline = System.currentTimeMillis() + ${timeoutMs};
+    try {
+      ${mainClass}.main(new String[0]);
+    } catch (VxTimeout e) {
+      kind = "timeout";
+    } catch (VxExit e) {
+      exit = e.code;
+    } catch (StackOverflowError e) {
+      kind = "runtime";
+      error = "StackOverflowError: a method calls itself too many times. Is there a base case that stops the recursion?";
+    } catch (NoSuchElementException e) {
+      kind = "input";
+      error = e.toString();
+    } catch (Throwable e) {
+      Throwable c = e;
+      if (c instanceof ExceptionInInitializerError && c.getCause() != null) c = c.getCause();
+      if (c instanceof VxExit) { exit = ((VxExit) c).code; }
+      else {
+        kind = "runtime";
+        error = c.toString();
+        error += vxWhere(c);
+      }
+    }
+    VxGuard.deadline = Long.MAX_VALUE;
+    System.out.flush();
+    System.err.flush();
+    System.setOut(realOut);
+    System.setErr(realErr);
+    String o = out.toString("UTF-8"), e2 = err.toString("UTF-8");
+    if (o.length() > 20000) o = o.substring(0, 20000);
+    if (e2.length() > 20000) e2 = e2.substring(0, 20000);
+    String res = "{\\"stdout\\":" + q(o) + ",\\"stderr\\":" + q(e2) + ",\\"exit\\":" + exit
+      + ",\\"kind\\":" + (kind == null ? "null" : q(kind)) + ",\\"error\\":" + (error == null ? "null" : q(error)) + "}";
+    try (Writer w = new OutputStreamWriter(new FileOutputStream("${outFile}"), "UTF-8")) { w.write(res); }
+  }
+}
+`;
+}
+
+export function javaCompileMessage(text: string, file = "Solution.java"): string {
+  const own = new RegExp(`^\\/[^\\s:]*${file.replace(/[$.]/g, "\\$&")}:(\\d+):`);
+  const lines = text.split("\n").filter((l) => l.trim() && !/^\d+ errors?$/.test(l.trim()));
+  if (lines.length && !lines.some((l) => own.test(l)) && /Vx(Main|Program|Guard|Timeout|Exit)/.test(text)) {
+    return "Something in your code clashes with the test runner. Please don't name a class VxMain, VxProgram or VxGuard.";
   }
   return (
-    text
-      .replace(/VxGuard\.tick\(\) && \(/g, "(")
-      .split("\n")
-      .filter((l) => l.trim() && !/^\d+ errors?$/.test(l.trim()))
-      .map((l) => l.replace(/^\/[^\s:]*Solution\.java:(\d+):/, "Line $1:"))
+    lines
+      .map((l) => l.replace(/VxGuard\.tick\(\) && \(/g, "(").replace(/VxGuard\.tick\(\);/g, ""))
+      .map((l) => l.replace(own, "Line $1:"))
+      .map((l) => l.replace(/^\/[^\s:]*\/([\w$]+\.java):(\d+):/, "$1, line $2:"))
       .slice(0, 12)
       .join("\n") || "Your code didn't compile."
   );
@@ -393,9 +547,38 @@ export function javaCompileMessage(text: string): string {
 
 // ---------- PHP ----------
 
+/**
+ * php-wasm has no STDIN or STDERR and its readline() blocks, so these are defined first, on the
+ * same line as `<?php` so PHP's line numbers still match the learner's code.
+ */
+function phpShim(stdin: string): string {
+  const b64 = typeof btoa === "function" ? btoa(unescape(encodeURIComponent(stdin))) : Buffer.from(stdin, "utf8").toString("base64");
+  return (
+    `if (!defined("STDIN")) { $__vx_in = fopen("php://memory", "r+"); fwrite($__vx_in, base64_decode("${b64}")); rewind($__vx_in); define("STDIN", $__vx_in); unset($__vx_in); } ` +
+    `if (!defined("STDOUT")) define("STDOUT", fopen("php://output", "w")); ` +
+    `if (!defined("STDERR")) define("STDERR", fopen("php://output", "w")); ` +
+    `function __vx_readline($prompt = null) { if ($prompt !== null) echo $prompt; $l = fgets(STDIN); return $l === false ? false : rtrim($l, "\\r\\n"); } `
+  );
+}
+
+/** The learner's code as a runnable script, with input available on STDIN. */
+export function phpSource(code: string, stdin = ""): string {
+  // php-wasm's own readline() waits for a keyboard that isn't there, so calls go to the shim instead.
+  const body = code.replace(/\?>\s*$/, "").replace(/(?<![\w$>:\\])(?<!function\s+)readline(?=\s*\()/gi, "__vx_readline");
+  const m = /^\s*<\?php\b/.exec(body);
+  return m ? `${m[0]} ${phpShim(stdin)}${body.slice(m[0].length)}` : `<?php ${phpShim(stdin)}${body}`;
+}
+
+/** php-wasm calls the script "php-wasm run script"; say "line N" instead. */
+export function phpTidy(text: string): string {
+  return text
+    .replace(/ in php-wasm run script on line (\d+)/g, " (line $1)")
+    .replace(/ in php-wasm run script:(\d+)/g, " (line $1)")
+    .replace(/^PHP (?=(Fatal|Parse|Warning|Notice|Deprecated))/gm, "");
+}
+
 export function phpProgram(code: string, fn: string, sig: Signature, tests: TestInput[]): string {
-  let body = code.replace(/\?>\s*$/, "");
-  if (!/^\s*<\?php/.test(body)) body = "<?php\n" + body;
+  const body = phpSource(code);
   const asMap = sig.returns === "map";
   const calls = tests
     .map((t, i) => {
@@ -409,6 +592,7 @@ function vx_run($i, $args) {
   echo "\\x01VX|B|$i\\n";
   ob_start();
   try {
+    if (!function_exists(${JSON.stringify(fn)})) throw new Error("I couldn't find a function called ${fn}. Keep its name exactly as in the starter code.");
     $r = ${fn}(...json_decode($args, true));
     $o = ob_get_clean();
     echo "\\x01VX|O|$i|" . json_encode($o) . "\\n";
@@ -417,9 +601,45 @@ function vx_run($i, $args) {
   } catch (Throwable $e) {
     $o = ob_get_clean();
     echo "\\x01VX|O|$i|" . json_encode($o) . "\\n";
-    echo "\\x01VX|E|$i|" . json_encode(get_class($e) . ": " . $e->getMessage() . " (line " . $e->getLine() . ")") . "\\n";
+    echo "\\x01VX|E|$i|" . json_encode(get_class($e) . ": " . $e->getMessage() . ($e->getFile() === __FILE__ && $e->getLine() > ${body.split("\n").length} ? "" : " (line " . $e->getLine() . ")")) . "\\n";
   }
 }
 ${calls}
 `;
+}
+
+// ---------- Hints ----------
+
+/** A line that calls the exercise function and prints the result, in the learner's language. */
+export function exampleCall(language: string, fn: string, args: unknown[], sig?: Signature | null): string {
+  const py = (v: unknown): string =>
+    JSON.stringify(v).replace(/\btrue\b/g, "True").replace(/\bfalse\b/g, "False").replace(/\bnull\b/g, "None").replace(/,(?=\S)/g, ", ");
+  const js = (v: unknown) => JSON.stringify(v).replace(/,(?=\S)/g, ", ");
+  const php = (v: unknown): string =>
+    Array.isArray(v) ? `[${v.map(php).join(", ")}]` : typeof v === "string" ? JSON.stringify(v).replace(/\$/g, "\\$") : js(v);
+  const typed = (types: Record<string, (v: unknown) => string>, fallback: (v: unknown) => string) =>
+    args.map((a, k) => (sig && types[sig.params[k]] ? types[sig.params[k]](a) : fallback(a))).join(", ");
+  switch (language) {
+    case "python":
+      return `print(${fn}(${args.map(py).join(", ")}))`;
+    case "javascript":
+      return `console.log(${fn}(${args.map(js).join(", ")}));`;
+    case "php":
+      return `echo json_encode(${fn}(${args.map(php).join(", ")})), "\\n";`;
+    case "cpp": {
+      const call = `${fn}(${typed({ ...CPP_TYPES, "int[]": (v) => `{${(v as number[]).join(", ")}}` }, js)})`;
+      const ret = sig?.returns ?? "";
+      const body = ret.endsWith("[]")
+        ? `    for (auto x : ${call}) cout << x << " ";\n    cout << endl;`
+        : `    cout << ${call} << endl;`;
+      return `int main() {\n${body}\n}`;
+    }
+    case "java": {
+      const call = `Solution.${fn}(${typed(JAVA_TYPES, js)})`;
+      const shown = (sig?.returns ?? "").endsWith("[]") ? `java.util.Arrays.toString(${call})` : call;
+      return `public static void main(String[] args) {\n    System.out.println(${shown});\n}`;
+    }
+    default:
+      return "";
+  }
 }
