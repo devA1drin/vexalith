@@ -8,6 +8,7 @@ from app.db.session import get_db
 from app.models.models import Question, User
 from app.schemas.schemas import ResponseCreate, ResponseOut
 from app.services.learning import submit_response
+from app.services.xp import safe_sync
 
 MIN_EXPLANATION_CHARS = 10
 
@@ -27,6 +28,7 @@ def create_response(
     if len(body.answer_text.strip()) < min_len:
         raise HTTPException(status_code=422, detail=f"Answer must be at least {min_len} characters")
     response, payload = submit_response(db, user=user, question=question, answer_text=body.answer_text)
+    safe_sync(db, user)
     return ResponseOut(
         id=response.id,
         question_id=response.question_id,

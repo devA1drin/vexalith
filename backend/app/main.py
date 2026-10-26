@@ -12,12 +12,13 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, daily, exercises, feedback, meta, progress, questions, responses, users
+from app.api import admin, daily, exercises, feedback, meta, progress, questions, responses, users, xp
 from app.config import get_settings
 from app.db.session import SessionLocal, engine
-from app.models.models import Question
+from app.models.models import AppMeta, Question
 from app.schemas.schemas import HealthOut
 from app.services.question_bank import migrate_schema, seed_domains_and_questions
+from app.services.xp import backfill_all
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-for r in (users.router, questions.router, responses.router, progress.router, daily.router, exercises.router, feedback.router, meta.router, admin.router):
+for r in (users.router, questions.router, responses.router, progress.router, daily.router, exercises.router, feedback.router, meta.router, admin.router, xp.router):
     app.include_router(r, prefix="/api")
 
 _db_ready = False
@@ -65,6 +66,34 @@ def init_db() -> None:
     finally:
         db.close()
     _db_ready = True
+    backfill_xp()
+
+
+XP_BACKFILL_KEY, XP_BACKFILL_VERSION = "xp_backfill", "1"
+
+
+def backfill_xp() -> None:
+    """Once per database: give every learner XP and badges for what they've already done.
+
+    Learners are also synced whenever they use the site, so if this is skipped nothing is lost.
+    """
+    db = SessionLocal()
+    try:
+        meta = db.get(AppMeta, XP_BACKFILL_KEY)
+        if meta is not None and meta.value == XP_BACKFILL_VERSION:
+            return
+        n = backfill_all(db)
+        if meta is None:
+            db.add(AppMeta(key=XP_BACKFILL_KEY, value=XP_BACKFILL_VERSION))
+        else:
+            meta.value = XP_BACKFILL_VERSION
+        db.commit()
+        logger.info("XP backfill done for %d learners", n)
+    except Exception:  # noqa: BLE001 - XP must never stop the API from starting
+        db.rollback()
+        logger.exception("XP backfill failed; learners will be synced as they use the site")
+    finally:
+        db.close()
 
 
 try:
