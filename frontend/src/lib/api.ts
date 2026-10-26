@@ -198,7 +198,7 @@ export type LevelInfo = {
   /** 0..1 of the way from this level to the next. */
   progress: number;
 };
-export type BadgeGroup = "answers" | "streaks" | "languages" | "code";
+export type BadgeGroup = "answers" | "streaks" | "languages" | "code" | "paths";
 export type BadgeOut = { key: string; name: string; description: string; group: BadgeGroup; earned: boolean; earned_at: string | null };
 export type XpOut = LevelInfo & {
   xp_this_week: number;
@@ -232,6 +232,50 @@ export class ApiError extends Error {
     super(message);
   }
 }
+
+// ── Learning paths ──
+export type StepStatus = "locked" | "open" | "done";
+export type PathExercise = {
+  title: string;
+  any_language: boolean;
+  options: { slug: string; language: string; language_name: string }[];
+  passed: boolean;
+  passed_slug: string | null;
+};
+export type PathStep = {
+  number: number;
+  key: string;
+  title: string;
+  blurb: string;
+  levels: string;
+  status: StepStatus;
+  skipped: boolean;
+  pool_size: number;
+  target: number;
+  answered: number;
+  score: number;
+  questions_passed: boolean;
+  exercise: PathExercise | null;
+  done_at: string | null;
+};
+export type PathSummary = {
+  slug: string;
+  name: string;
+  blurb: string;
+  mark: string;
+  steps_total: number;
+  steps_done: number;
+  progress: number;
+  started: boolean;
+  finished: boolean;
+  current_step: number;
+  current_title: string;
+  exercises: number;
+};
+export type PathRules = { pass_mark: number; step_xp: number; path_xp: number };
+export type ContinueCard = { path: PathSummary; step: PathStep; from_history: boolean };
+export type PathsOut = PathRules & { paths: PathSummary[]; continue: ContinueCard | null };
+export type PathDetail = PathSummary & PathRules & { steps: PathStep[] };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api/backend${path}`, {
@@ -290,6 +334,12 @@ export const api = {
     request<SubmitOut>(`/exercises/${encodeURIComponent(slug)}/submit`, { method: "POST", body: JSON.stringify({ code, results }) }),
   exerciseHint: (slug: string) => request<ExerciseHelp>(`/exercises/${encodeURIComponent(slug)}/hints`, { method: "POST", body: "{}" }),
   xp: () => request<XpOut>("/xp"),
+  paths: () => request<PathsOut>("/paths"),
+  path: (slug: string) => request<PathDetail>(`/paths/${encodeURIComponent(slug)}`),
+  pathQuestion: (slug: string, step: number, exclude: number[] = []) =>
+    request<Question>(`/paths/${encodeURIComponent(slug)}/steps/${step}/next${exclude.length ? `?exclude=${exclude.join(",")}` : ""}`),
+  skipAhead: (slug: string, step: number) =>
+    request<PathDetail>(`/paths/${encodeURIComponent(slug)}/steps/${step}/skip-ahead`, { method: "POST", body: "{}" }),
   xpSync: () => request<XpSyncOut>("/xp/sync", { method: "POST", body: "{}" }),
   leaderboard: (period: "week" | "all") => request<LeaderboardOut>(`/leaderboard?period=${period}`),
   xpProfile: () => request<XpProfile>("/xp/profile"),
