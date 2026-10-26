@@ -309,12 +309,24 @@ def new_handle(db: Session) -> str:
 
 
 def ensure_profile(db: Session, user: User) -> LearnerProfile:
+    """The learner's leaderboard profile, created (and committed) on first use.
+
+    The header and the page can ask for it at the same moment on a first visit, so a
+    lost race just reads the profile the other request created.
+    """
     profile = db.get(LearnerProfile, user.id)
-    if profile is None:
-        profile = LearnerProfile(user_id=user.id, handle=new_handle(db), visibility="handle")
-        db.add(profile)
-        db.flush()
-    return profile
+    if profile is not None:
+        return profile
+    for _ in range(3):
+        db.add(LearnerProfile(user_id=user.id, handle=new_handle(db), visibility="handle"))
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+        profile = db.get(LearnerProfile, user.id)
+        if profile is not None:
+            return profile
+    raise RuntimeError("Couldn't create a leaderboard profile")
 
 
 def _safe_name(user: User) -> str:
@@ -344,7 +356,7 @@ class SyncResult:
     badges: list[UserBadge]
 
 
-def sync_user(db: Session, user: User, now: datetime | None = None, *, commit: bool = True) -> SyncResult:
+def sync_user(db: Session, user: User, now: datetime | None = None) -> SyncResult:
     """Store any XP and badges the learner has earned but doesn't have yet. Idempotent."""
     # The very first sync for a learner counts their past work ("retro"); after that it's new work.
     retro = 1 if db.get(LearnerProfile, user.id) is None else 0
@@ -362,14 +374,11 @@ def sync_user(db: Session, user: User, now: datetime | None = None, *, commit: b
         for key, when in earned.badges.items() if key not in have_badges and key in BADGE_BY_KEY
     ]
     db.add_all(new_events + new_badges)
-    if commit:
-        try:
-            db.commit()
-        except IntegrityError:  # another request synced the same awards at the same moment
-            db.rollback()
-            return SyncResult([], [])
-    else:
-        db.flush()
+    try:
+        db.commit()
+    except IntegrityError:  # another request synced the same awards at the same moment
+        db.rollback()
+        return SyncResult([], [])
     return SyncResult(new_events, new_badges)
 
 

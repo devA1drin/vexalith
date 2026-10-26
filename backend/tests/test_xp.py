@@ -355,3 +355,30 @@ def test_leaderboard_lists_at_most_fifty(client):
 @pytest.mark.parametrize("path", ["/api/xp", "/api/leaderboard", "/api/xp/profile"])
 def test_xp_endpoints_need_sign_in(client, path):
     assert client.get(path).status_code == 401
+
+
+def test_first_visit_requests_at_the_same_time_share_one_profile(client):
+    """The header and the page both sync on a first visit; neither may fail."""
+    import threading
+
+    uid = _user(client, "xp-race")
+    with SessionLocal() as db:
+        _answer(db, uid, _question(db))
+    errors, barrier = [], threading.Barrier(4)
+
+    def go():
+        try:
+            barrier.wait()
+            with SessionLocal() as db:
+                xp.sync_user(db, db.get(User, uid))
+                xp.summary(db, db.get(User, uid))
+        except Exception as e:  # noqa: BLE001
+            errors.append(e)
+
+    threads = [threading.Thread(target=go) for _ in range(4)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert not errors
+    with SessionLocal() as db:
+        assert db.query(LearnerProfile).filter_by(user_id=uid).count() == 1
+        assert db.query(XpEvent).filter_by(user_id=uid).count() == 1
