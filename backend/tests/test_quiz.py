@@ -131,6 +131,9 @@ def test_the_clock_lives_on_the_server_and_survives_a_refresh(client):
     s = r.json()
     assert s["status"] == "active" and s["time_limit_s"] == 600 and 595 <= s["remaining_s"] <= 600
     assert s["current"] == 0 and s["question"]["id"] == _qids(s["id"])[0] and len(s["slots"]) == 5
+    # Every question comes along (so the page can move on at once), but never the answers.
+    assert [q["id"] for q in s["questions"]] == _qids(s["id"])
+    assert all("rubric" not in q and "reference_answer" not in q for q in s["questions"])
     _shift(s["id"], 120)  # two minutes later, the learner refreshes the page
     again = client.get(f"/api/quiz/{s['id']}", headers=auth(pid=pid)).json()
     assert 475 <= again["remaining_s"] <= 480  # not reset to 10:00
@@ -222,7 +225,7 @@ def test_skipped_questions_come_back_and_answering_everything_ends_it(client):
         st = _answer(client, pid, s["id"], pos, WRONG if pos == 4 else _good(qids[pos])).json()
     assert st["current"] == 0 and st["returning"] is True
     st = _answer(client, pid, s["id"], 0, _good(qids[0])).json()
-    assert st["status"] == "finished"
+    assert st["status"] == "finished" and st["questions"] == []
     res = client.get(f"/api/quiz/{s['id']}/results", headers=auth(pid=pid)).json()
     assert res["ended_by"] == "done" and res["correct"] == 4 and res["to_review"] == 1
     miss = res["questions"][4]
