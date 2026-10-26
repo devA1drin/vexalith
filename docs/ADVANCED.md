@@ -36,6 +36,9 @@ Browser ──► Next.js 15 (Vercel)                         FastAPI (Vercel Py
 | POST | `/api/questions/{id}/skip?language=python&focus=fundamentals` | JWT |
 | POST | `/api/responses` `{question_id, answer_text}` | JWT |
 | GET | `/api/progress` (skills, per-language scores, fundamentals status) | JWT |
+| GET / POST | `/api/xp` (level, badges, recent XP) · `/api/xp/sync` (count new work, return what to toast once) | JWT |
+| GET | `/api/leaderboard?period=week\|all` (top 50 + your rank; weeks start Monday 00:00 Asia/Manila; never emails) | JWT |
+| GET / PUT / POST | `/api/xp/profile` `{visibility: handle\|name\|anonymous\|hidden}` · `/api/xp/profile/handle` (new random handle) | JWT |
 | POST / GET | `/api/feedback` · `/api/feedback/mine` | JWT |
 | GET | `/api/feedback/recent` | public (no emails) |
 | GET | `/api/languages` · `/api/domains` · `/api/catalog` (question counts per language and kind, no content) | public |

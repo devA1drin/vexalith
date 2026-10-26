@@ -118,7 +118,7 @@ A test stops after 4 seconds (6 for Java) and a program after 10 seconds, so an 
 **Stuck? Use "How to solve it"** (under the example tests; on a phone it sits above the editor):
 
 - **Hints**: up to 3, shown one at a time. The first is a nudge, the second the key idea, the third the technique to use.
-  Exercises aren't scored, so hints are free.
+  Each hint you open before passing takes 10% off the exercise's XP (see below).
 - **Explanation**: opens by itself when you pass every test. It explains the problem in general terms, not line by line:
   *the idea* behind it, *the approach* in a few steps, *what to watch out for* (common mistakes and edge cases) and
   *the pattern* you can reuse on similar problems, plus a short reference solution to compare with yours.
@@ -150,6 +150,39 @@ How it stays safe and fast:
 
 CheerpJ is made by [Leaning Technologies](https://leaningtech.com) and used here under its free
 [Community License](https://cheerpj.com/docs/licensing). If you run a copy of Vexalith for a company, check that license first.
+
+## XP, levels and badges
+
+You earn **XP** (experience points) as you learn. Your level and XP sit in the top bar; click them to see
+**Level & badges**. A small message pops up in the corner whenever you earn XP or a badge.
+
+| You did this | XP |
+|---|---|
+| Got a question right (first time only) | 10 beginner, 20 intermediate, 30 advanced |
+| Passed a coding exercise (first time only) | 30 beginner, 50 intermediate, 80 advanced |
+| Finished the daily challenge | 15 a day |
+| Kept a daily streak going | +5 for each day in a row after the first, up to +30 a day |
+
+- Each hint takes 10% off that answer's XP (at most 30% off). On coding exercises, **Solved with help** takes 25% off,
+  and the most you can lose is half.
+- Partly right answers, and repeating a question or exercise you already got, don't add XP.
+- Work you did before XP existed counts too. It's added the first time you open the site.
+
+**Levels** get a little further apart each time: level 2 at 100 XP, level 3 at 300, level 4 at 600, level 5 at 1,000.
+They're named Initiate, Tracer, Debugger, Builder, Solver, Architect, Optimizer, Logician, Limit Breaker and Limitless.
+
+**20 badges** mark real milestones: your first right answer, 10 and 50 right answers, an advanced question, mastering a topic,
+your first daily challenge, 3, 7 and 30-day streaks, a right answer in C++, in Java, on OOP and in Filipino or Taglish,
+your first exercise passed in each language, an exercise passed without hints, and exercises passed in all five languages.
+
+### Leaderboard
+
+**Leaderboard** (under Progress) ranks learners by XP **this week** or **all time**. Weeks start Monday 12 AM Philippine time.
+It shows the top 50, plus your own rank if you're further down.
+
+Your email is never shown. You appear under a random handle like "Swift Parser 42", not your name.
+Under **How you appear** you can switch to your name, show as "Anonymous learner", hide yourself from the board,
+or get a new random handle.
 
 ## Run it on your computer
 
@@ -297,7 +330,7 @@ vexalith/
 │   ├── app/ai/         The graders (offline and AI model)
 │   └── tests/          Automatic tests
 ├── frontend/           The website (Next.js)
-│   ├── src/app/        One folder per page: practice, code, daily, progress, feedback, login
+│   ├── src/app/        One folder per page: practice, code, daily, progress, badges, leaderboard, feedback, login
 │   ├── src/lib/runner* The in-browser code runners (one file per language)
 │   └── public/runners/ The page that hosts the Java runner
 ├── docs/               Screenshots and advanced documentation
