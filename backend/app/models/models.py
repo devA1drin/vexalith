@@ -321,3 +321,35 @@ class LearnerProfile(Base):
     handle: Mapped[str] = mapped_column(String(40), unique=True)
     visibility: Mapped[str] = mapped_column(String(16), default="handle")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+# --- Learning paths (new tables, so they're additive; see app/services/paths.py) ---
+# Progress itself is worked out from answers and exercise runs; these only remember
+# where the learner was last and which steps they chose to skip ahead to.
+
+
+class PathActivity(Base):
+    """The step a learner last opened in a path, for "Continue where you left off"."""
+
+    __tablename__ = "path_activity"
+    __table_args__ = (UniqueConstraint("user_id", "path", name="uq_path_activity"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    path: Mapped[str] = mapped_column(String(40))
+    step: Mapped[str] = mapped_column(String(40))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    last_active_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+
+
+class PathSkip(Base):
+    """A locked step the learner chose to open early ("skip ahead")."""
+
+    __tablename__ = "path_skips"
+    __table_args__ = (UniqueConstraint("user_id", "path", "step", name="uq_path_skip"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    path: Mapped[str] = mapped_column(String(40))
+    step: Mapped[str] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
