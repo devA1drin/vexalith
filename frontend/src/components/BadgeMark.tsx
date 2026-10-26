@@ -2,7 +2,7 @@ import type { BadgeGroup } from "@/lib/api";
 
 /**
  * Custom badge marks: a frame per group (answers = chamfered plate, streaks = hexagon,
- * languages = shield, code = terminal window, paths = route marker) and a line-art glyph or
+ * languages = shield, code = terminal window, paths = route marker, review = stopwatch) and a line-art glyph or
  * short mono label.
  * Earned marks are lime; locked ones are graphite with a dashed frame.
  */
@@ -13,6 +13,7 @@ const FRAMES: Record<BadgeGroup, string> = {
   languages: "M8 6H56V40L32 60L8 40Z",
   code: "M6 8H58V56H6Z",
   paths: "M32 3L61 32L32 61L3 32Z",
+  review: "M28 2H36V8.3A26 26 0 1 1 28 8.3Z",
 };
 const INNER: Record<BadgeGroup, string> = {
   answers: "M22 9H42L55 22V42L42 55H22L9 42V22Z",
@@ -20,6 +21,7 @@ const INNER: Record<BadgeGroup, string> = {
   languages: "M13 11H51V38L32 54L13 38Z",
   code: "M11 18H53V51H11Z",
   paths: "M32 9.5L54.5 32L32 54.5L9.5 32Z",
+  review: "M32 13A21 21 0 1 1 31.99 13Z",
 };
 
 /** Short labels drawn in mono type inside the mark. */
@@ -117,6 +119,22 @@ function Glyph({ id, color }: { id: string; color: string }) {
           <rect x="42" y="21" width="5" height="5" fill={color} />
           <rect x="29.5" y="43" width="5" height="5" fill={color} />
           <rect x="29" y="29" width="6" height="6" fill="none" stroke={color} strokeWidth={1.6} />
+        </>
+      );
+    case "second-look": // a retry loop closing on a check
+      return (
+        <>
+          <path d="M42.5 30A11 11 0 1 0 41 40.5" {...s} strokeWidth={2} />
+          <path d="M44.5 23.5L42.8 30.6L36 28.6" {...s} strokeWidth={2} />
+          <path d="M27 35L31 39L37.5 31.5" {...s} strokeWidth={2.6} />
+        </>
+      );
+    case "beat-the-clock": // the dial 80% filled, the hand still inside the limit
+      return (
+        <>
+          <circle cx="32" cy="35" r="12" fill="none" stroke={color} strokeWidth={1.4} strokeDasharray="2 2.6" />
+          <path d="M32 35V24A11 11 0 1 1 21.54 31.6Z" fill={color} fillOpacity={0.9} />
+          <path d="M32 35L21.54 31.6" stroke="#0c0d0c" strokeWidth={1.6} />
         </>
       );
     default:

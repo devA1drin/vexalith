@@ -12,6 +12,7 @@ const GROUPS: { id: BadgeGroup; title: string }[] = [
   { id: "languages", title: "Languages & topics" },
   { id: "code", title: "Coding exercises" },
   { id: "paths", title: "Learning paths" },
+  { id: "review", title: "Review & timed quizzes" },
 ];
 
 const RULES: [string, string][] = [
@@ -19,6 +20,8 @@ const RULES: [string, string][] = [
   ["Coding exercise passed", "30 / 50 / 80 XP, once per exercise. Each hint takes 10% off, and Solved with help takes 25% off."],
   ["Daily challenge", "15 XP a day, plus a streak bonus of 5 XP for every day in a row, up to 30."],
   ["Learning paths", "25 XP for each step you finish and 100 XP for finishing a whole path."],
+  ["Fixing a mistake", "5 XP the first time you fix an item from Review mistakes. Once per item."],
+  ["Timed quiz", "3 XP on top for a question you get right for the first time in a quiz. Repeats earn nothing."],
 ];
 
 function when(iso: string | null) {

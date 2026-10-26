@@ -198,7 +198,7 @@ export type LevelInfo = {
   /** 0..1 of the way from this level to the next. */
   progress: number;
 };
-export type BadgeGroup = "answers" | "streaks" | "languages" | "code" | "paths";
+export type BadgeGroup = "answers" | "streaks" | "languages" | "code" | "paths" | "review";
 export type BadgeOut = { key: string; name: string; description: string; group: BadgeGroup; earned: boolean; earned_at: string | null };
 export type XpOut = LevelInfo & {
   xp_this_week: number;
@@ -277,6 +277,131 @@ export type ContinueCard = { path: PathSummary; step: PathStep; from_history: bo
 export type PathsOut = PathRules & { paths: PathSummary[]; continue: ContinueCard | null };
 export type PathDetail = PathSummary & PathRules & { steps: PathStep[] };
 
+// ── Mistake review ──
+export type ReviewStatus = "to_fix" | "check_again";
+export type ReviewItem = {
+  key: string;
+  kind: "question" | "exercise";
+  id: number | null;
+  slug: string | null;
+  title: string;
+  language: string;
+  topic: string;
+  topic_name: string;
+  difficulty: string;
+  question_kind: "explain" | "fill_blank" | "code";
+  status: ReviewStatus;
+  reason: "wrong" | "partial" | "timeout" | "failed" | "helped";
+  reason_label: string;
+  times_wrong: number;
+  last_wrong_at: string | null;
+  fixed_at: string | null;
+  due_at: string | null;
+  last_answer: string;
+  feedback: string;
+  explanation: string;
+  code: string;
+  score: number | null;
+  tests: [number, number] | null;
+  paths: string[];
+};
+export type FilterOption = { value: string; label: string; count: number };
+export type ReviewFilters = { topic?: string; language?: string; path?: string; difficulty?: string; kind?: "" | "question" | "exercise" };
+export type ReviewOut = {
+  items: ReviewItem[];
+  coming_back: { key: string; title: string; fixed_at: string; due_at: string }[];
+  counts: { to_fix: number; check_again: number; waiting: number; done: number; shown: number };
+  fixes: number;
+  filters: { topics: FilterOption[]; languages: FilterOption[]; paths: FilterOption[]; difficulties: FilterOption[] };
+  rules: { fix_xp: number; confirm_days: number; second_look: number };
+};
+
+// ── Timed quiz ──
+export type QuizScope = "topic" | "language" | "path" | "mixed";
+export type QuizBrief = {
+  id: number;
+  scope: QuizScope;
+  scope_value: string;
+  scope_label: string;
+  length: number;
+  time_limit_s: number;
+  instant: boolean;
+  status: "active" | "finished";
+  started_at: string;
+  deadline_at: string;
+  remaining_s: number;
+};
+export type QuizRules = { quiz_xp: number; grace_s: number; beat_score: number; beat_min: number };
+export type QuizOptions = {
+  scopes: Record<QuizScope, FilterOption[]>;
+  lengths: number[];
+  minutes: number[];
+  active: QuizBrief | null;
+  rules: QuizRules;
+};
+export type QuizSlot = { position: number; state: "open" | "answered" | "skipped"; verdict: FeedbackPayload["verdict"] | null };
+export type QuizState = QuizBrief & {
+  server_now: string;
+  current: number | null;
+  returning: boolean;
+  question: Question | null;
+  /** All questions in slot order (only while the quiz is running). */
+  questions: (Question | null)[];
+  slots: QuizSlot[];
+  answered: number;
+  feedback?: FeedbackPayload | null;
+};
+export type QuizReviewRow = {
+  position: number;
+  question_id: number;
+  title: string;
+  language: string;
+  difficulty: string;
+  topic_name: string;
+  kind: "explain" | "fill_blank";
+  code: string;
+  prompt: string;
+  answer: string;
+  status: "correct" | "partial" | "wrong" | "unanswered" | "skipped";
+  score: number;
+  feedback: string;
+  reference_answer: string;
+  accepted_answers: string[];
+  key_idea: string;
+};
+export type QuizResults = QuizBrief & {
+  finished_at: string;
+  ended_by: "done" | "time" | "ended";
+  correct: number;
+  score: number;
+  time_used_s: number;
+  xp: number;
+  to_review: number;
+  best_before: number | null;
+  new_best: boolean;
+  beat_the_clock: boolean;
+  questions: QuizReviewRow[];
+};
+export type QuizHistory = {
+  quizzes: {
+    id: number;
+    scope: QuizScope;
+    scope_value: string;
+    scope_label: string;
+    length: number;
+    correct: number;
+    score: number;
+    instant: boolean;
+    time_limit_s: number;
+    time_used_s: number;
+    ended_by: string;
+    finished_at: string;
+  }[];
+  best: { scope: QuizScope; scope_value: string; scope_label: string; best_score: number; best_correct: number; best_length: number; attempts: number; last_at: string }[];
+  total: number;
+};
+export type QuizStartBody = { scope: QuizScope; value: string; length: number; minutes: number; instant: boolean };
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api/backend${path}`, {
     ...init,
@@ -345,6 +470,23 @@ export const api = {
   xpProfile: () => request<XpProfile>("/xp/profile"),
   setVisibility: (visibility: Visibility) => request<XpProfile>("/xp/profile", { method: "PUT", body: JSON.stringify({ visibility }) }),
   newHandle: () => request<XpProfile>("/xp/profile/handle", { method: "POST", body: "{}" }),
+  review: (f: ReviewFilters = {}) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(f)) if (v) q.set(k, v);
+    const qs = q.toString();
+    return request<ReviewOut>(`/review${qs ? `?${qs}` : ""}`);
+  },
+  retryQuestion: (id: number) => request<{ ok: boolean }>(`/review/questions/${id}/retry`, { method: "POST", body: "{}" }),
+  retryExercise: (slug: string) => request<{ ok: boolean }>(`/review/exercises/${encodeURIComponent(slug)}/retry`, { method: "POST", body: "{}" }),
+  quizOptions: () => request<QuizOptions>("/quiz/options"),
+  quizHistory: () => request<QuizHistory>("/quiz/history"),
+  startQuiz: (body: QuizStartBody) => request<QuizState>("/quiz", { method: "POST", body: JSON.stringify(body) }),
+  quiz: (id: number) => request<QuizState>(`/quiz/${id}`),
+  quizAnswer: (id: number, position: number, answer_text: string) =>
+    request<QuizState>(`/quiz/${id}/answer`, { method: "POST", body: JSON.stringify({ position, answer_text }) }),
+  quizSkip: (id: number, position: number) => request<QuizState>(`/quiz/${id}/skip`, { method: "POST", body: JSON.stringify({ position }) }),
+  finishQuiz: (id: number) => request<QuizResults>(`/quiz/${id}/finish`, { method: "POST", body: "{}" }),
+  quizResults: (id: number) => request<QuizResults>(`/quiz/${id}/results`),
   revealSolution: (slug: string, confirm: boolean) =>
     request<ExerciseHelp>(`/exercises/${encodeURIComponent(slug)}/solution`, { method: "POST", body: JSON.stringify({ confirm }) }),
 };

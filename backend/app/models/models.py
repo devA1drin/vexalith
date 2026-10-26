@@ -353,3 +353,63 @@ class PathSkip(Base):
     path: Mapped[str] = mapped_column(String(40))
     step: Mapped[str] = mapped_column(String(40))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+# --- Mistake review and timed quizzes (new tables, additive; see services/review.py, services/quiz.py) ---
+# Mistakes themselves are worked out from answers and exercise runs. These tables only hold
+# what history can't: a quiz's question list and server-side clock, and "retry" markers.
+
+
+class QuizSession(Base):
+    """One timed quiz. The clock lives here (started_at/deadline_at), so a refresh never resets it."""
+
+    __tablename__ = "quiz_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    scope: Mapped[str] = mapped_column(String(16))  # topic | language | path | mixed
+    scope_value: Mapped[str] = mapped_column(String(64), default="")
+    scope_label: Mapped[str] = mapped_column(String(120), default="")
+    length: Mapped[int] = mapped_column(Integer)
+    time_limit_s: Mapped[int] = mapped_column(Integer)
+    instant: Mapped[int] = mapped_column(Integer, default=0)  # 1 = feedback after each question
+    question_ids: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(16), default="active", index=True)  # active | finished
+    ended_by: Mapped[str] = mapped_column(String(16), default="")  # done | time | ended
+    correct: Mapped[int] = mapped_column(Integer, default=0)
+    score: Mapped[float] = mapped_column(Float, default=0.0)  # correct / length
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    deadline_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class QuizAnswer(Base):
+    """One question slot in a quiz: the answer given (if any) and the graded response."""
+
+    __tablename__ = "quiz_answers"
+    __table_args__ = (UniqueConstraint("quiz_id", "position", name="uq_quiz_answer"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    quiz_id: Mapped[int] = mapped_column(ForeignKey("quiz_sessions.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    position: Mapped[int] = mapped_column(Integer)
+    question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"))
+    answer_text: Mapped[str] = mapped_column(Text, default="")
+    skipped: Mapped[int] = mapped_column(Integer, default=0)
+    response_id: Mapped[int | None] = mapped_column(ForeignKey("responses.id"), nullable=True, index=True)
+    answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ReviewRetry(Base):
+    """The learner retried an item from Review ("q:<question id>" or "x:<exercise slug>").
+
+    A fix only earns its XP when it follows one of these, so answering wrong on purpose and
+    then right in normal practice pays nothing extra.
+    """
+
+    __tablename__ = "review_retries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    item: Mapped[str] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

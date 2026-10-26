@@ -173,6 +173,36 @@ from beginner to advanced. A step is a handful of questions on one theme, often 
 - **XP:** +25 for each step you finish and +100 for a whole path. Three badges go with them:
   **Trailhead** (your first step), **Path Finisher** (a whole path) and **Wayfinder** (three paths).
 
+## Review mistakes and timed quizzes
+
+Both live under **Practice**, as tabs next to normal practice.
+
+**Review mistakes** lists what you should look at again:
+
+- questions you got wrong or only partly right (including ones left unanswered when a timed quiz ran out),
+- coding exercises that failed and you never passed, and exercises you passed only after opening the solution.
+
+Each item shows your last answer, a short note on what went wrong and the main idea. Filter by topic, language,
+path or difficulty. Press **Retry** (or **Practice my mistakes** to go through them one after another). Questions are
+graded the usual way, in English, Filipino or Taglish. Exercises reopen in the code editor.
+
+- **Fixed:** get it right after pressing Retry and it leaves the list. **+5 XP**, once per item.
+- **Comes back once:** 3 days later it returns as **Check again**. Right again and it's done for good. No extra XP.
+- **No farming:** fix XP needs a Retry from Review, and each item pays only once. Copying a shown solution doesn't count.
+- **Second Look** badge: fix 10 mistakes.
+
+**Timed quiz:** pick a language, topic or path (or Mixed), 5, 10 or 20 questions and 5, 10 or 15 minutes.
+Short and fill-in-the-code questions come first. Choose feedback **at the end** or **after each question**.
+
+- The server keeps the start time, so refreshing or leaving the page doesn't reset the clock. What you've typed is kept too.
+- In the last minute the timer turns orange. When it hits zero, whatever you've typed is sent and the quiz ends.
+- You can skip a question and come back to it, or **Finish now**.
+- Results show your score, time used, and each question with the right answer and the idea behind it. Missed ones go to Review.
+- **XP:** the usual XP for a right answer, plus **+3** if it's the first time you got that question right and it was in a quiz.
+  Questions you'd already got right earn nothing again.
+- **Beat the Clock** badge: 80% or more on a quiz of 10 or more questions.
+- Your past quizzes and best score for each language, topic or path are listed on the quiz page.
+
 ## XP, levels and badges
 
 You earn **XP** (experience points) as you learn. Your level and XP sit in the top bar; click them to see
@@ -185,6 +215,8 @@ You earn **XP** (experience points) as you learn. Your level and XP sit in the t
 | Finished the daily challenge | 15 a day |
 | Kept a daily streak going | +5 for each day in a row after the first, up to +30 a day |
 | Finished a learning path step / a whole path | 25 / 100 |
+| Fixed a mistake from Review (once per item) | 5 |
+| Got a question right for the first time in a timed quiz | +3 on top |
 
 - Each hint takes 10% off that answer's XP (at most 30% off). On coding exercises, **Solved with help** takes 25% off,
   and the most you can lose is half.
@@ -197,7 +229,7 @@ They're named Initiate, Tracer, Debugger, Builder, Solver, Architect, Optimizer,
 **20 badges** mark real milestones: your first right answer, 10 and 50 right answers, an advanced question, mastering a topic,
 your first daily challenge, 3, 7 and 30-day streaks, a right answer in C++, in Java, on OOP and in Filipino or Taglish,
 your first exercise passed in each language, an exercise passed without hints, and exercises passed in all five languages.
-Three more come with [learning paths](#learning-paths).
+Three more come with [learning paths](#learning-paths), and two with [Review and timed quizzes](#review-mistakes-and-timed-quizzes).
 
 ### Leaderboard
 
