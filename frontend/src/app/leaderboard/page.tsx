@@ -79,6 +79,7 @@ function Board({ data }: { data: LeaderboardOut }) {
   const showYou = you.visibility !== "hidden" && you.rank !== null && !you.in_top;
   return (
     <div className="card overflow-hidden" data-testid="board">
+      <YouNote data={data} />
       <div className="grid grid-cols-[3rem_minmax(0,1fr)_auto] gap-3 border-b border-ink-700 px-4 py-2 label">
         <span>Rank</span>
         <span>Learner</span>
@@ -93,7 +94,6 @@ function Board({ data }: { data: LeaderboardOut }) {
           <Row e={{ rank: you.rank as number, name: you.name, xp: you.xp, level: you.level, level_name: you.level_name, is_you: true }} />
         </>
       )}
-      <YouNote data={data} />
     </div>
   );
 }
@@ -129,13 +129,13 @@ function YouNote({ data }: { data: LeaderboardOut }) {
     text = data.period === "week" ? "You haven't earned XP this week yet." : "Earn some XP to get on the board.";
   }
   if (!text) return null;
-  return <p className="border-t border-ink-700 px-4 py-3 text-[13px] text-ink-300" data-testid="you-note">{text}</p>;
+  return <p className="border-b border-ink-700 border-l-2 border-l-accent bg-accent/5 px-4 py-3 text-[13px] text-ink-200" data-testid="you-note">{text}</p>;
 }
 
 const OPTIONS: { v: Visibility; title: string; note: (p: XpProfile) => string }[] = [
   { v: "handle", title: "My handle", note: (p) => p.handle },
   { v: "name", title: "My name", note: (p) => p.name ?? "" },
-  { v: "anonymous", title: "Anonymous learner", note: () => "Your rank shows, your handle doesn't" },
+  { v: "anonymous", title: "Anonymous learner", note: () => "No name or handle" },
   { v: "hidden", title: "Hide me", note: () => "Leave me off the leaderboard" },
 ];
 
@@ -164,7 +164,7 @@ function Appearance({ onChange }: { onChange: () => void }) {
       {!p ? (
         <div className="mt-4 h-40 animate-pulse bg-ink-800" />
       ) : (
-        <fieldset className="mt-4 space-y-2" disabled={busy}>
+        <fieldset className="mt-4 min-w-0 space-y-2" disabled={busy}>
           <legend className="sr-only">Show me on the leaderboard as</legend>
           {OPTIONS.filter((o) => o.v !== "name" || p.name_available).map((o) => (
             <label
@@ -181,7 +181,7 @@ function Appearance({ onChange }: { onChange: () => void }) {
               />
               <span className="min-w-0">
                 <span className="block text-sm text-ink-50">{o.title}</span>
-                <span className="block truncate font-mono text-[12px] text-ink-400">{o.note(p)}</span>
+                <span className="block break-words font-mono text-[12px] text-ink-400">{o.note(p)}</span>
               </span>
             </label>
           ))}
