@@ -234,7 +234,7 @@ def test_xp_endpoint_shows_level_bar_and_all_badges(client):
         _answer(db, uid, _question(db, difficulty="advanced"))
     body = client.get("/api/xp", headers=h).json()
     assert body["xp"] == 30 and body["level"] == 1 and body["next_level_at"] == 100 and body["to_next"] == 70
-    assert len(body["badges"]) == len(xp.BADGES)
+    assert len(body["badges"]) == len(xp.ALL_BADGES)  # the 20 core badges plus the learning-path ones
     earned = {b["key"] for b in body["badges"] if b["earned"]}
     assert earned == {"first-correct", "advanced"} and body["badges_earned"] == 2
     assert body["recent"][0]["amount"] == 30

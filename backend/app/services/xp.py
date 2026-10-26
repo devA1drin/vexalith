@@ -13,6 +13,7 @@ XP rules
   and passing after opening the solution ("Solved with help") takes 25% off (at most 50% in total).
 - Daily challenge done: +15 per day.
 - Streak bonus: +5 for each day the streak has run before today, up to +30 (day 2 = +5, day 7+ = +30).
+- Learning paths: +25 for each step done, +100 for finishing a path (see app/services/paths.py).
 
 Levels: reaching level L takes 50 × L × (L − 1) XP in total (100, 300, 600, 1000, ...).
 """
@@ -98,7 +99,7 @@ class Badge:
     key: str
     name: str
     description: str
-    group: str  # answers | streaks | languages | code
+    group: str  # answers | streaks | languages | code | paths
 
 
 BADGES: list[Badge] = [
@@ -123,7 +124,15 @@ BADGES: list[Badge] = [
     Badge("unassisted", "Unassisted", "Pass a coding exercise without opening a hint or the solution.", "code"),
     Badge("polyglot", "Polyglot", "Pass a coding exercise in all five languages.", "code"),
 ]
-BADGE_BY_KEY = {b.key: b for b in BADGES}
+# Learning-path badges live in their own list (the 20 above are the core set).
+PATH_BADGES: list[Badge] = [
+    Badge("path-step", "Trailhead", "Finish a step in any learning path.", "paths"),
+    Badge("path-finisher", "Path Finisher", "Finish every step of a learning path.", "paths"),
+    Badge("path-three", "Wayfinder", "Finish three learning paths.", "paths"),
+]
+ALL_BADGES: list[Badge] = BADGES + PATH_BADGES
+BADGE_BY_KEY = {b.key: b for b in ALL_BADGES}
+PATH_KINDS = ("path_step", "path")
 
 
 # ----------------------------------------------------------------------------- time helpers
@@ -283,6 +292,14 @@ def compute(db: Session, user: User, now: datetime | None = None) -> Earned:
             out.badge("unassisted", when)
     if all(lang in passed_langs for lang in CODE_LANGUAGES):
         out.badge("polyglot", max(passed_langs.values()))
+
+    # Learning paths: steps and whole paths finished (worked out from the same history).
+    from app.services import paths
+
+    path_events, path_badges = paths.awards(db, user)
+    out.events.update(path_events)
+    for key, when in path_badges.items():
+        out.badge(key, when)
     return out
 
 
@@ -365,12 +382,21 @@ def sync_user(db: Session, user: User, now: datetime | None = None) -> SyncResul
     have = {k for (k,) in db.query(XpEvent.key).filter(XpEvent.user_id == user.id).all()}
     have_badges = {k for (k,) in db.query(UserBadge.badge).filter(UserBadge.user_id == user.id).all()}
     stamp = _aware(now)
+    # Path awards for work done before paths existed are past work too, even for known learners.
+    from app.services import paths
+
+    launch = paths.launched_at(db)
+
+    def is_retro(path_award: bool, when: datetime) -> int:
+        return 1 if retro or (path_award and launch is not None and _aware(when) < launch) else 0
+
     new_events = [
-        XpEvent(user_id=user.id, key=key, kind=kind, amount=amount, label=label, retro=retro, created_at=when, awarded_at=stamp)
+        XpEvent(user_id=user.id, key=key, kind=kind, amount=amount, label=label,
+                retro=is_retro(kind in PATH_KINDS, when), created_at=when, awarded_at=stamp)
         for key, (kind, amount, label, when) in earned.events.items() if key not in have
     ]
     new_badges = [
-        UserBadge(user_id=user.id, badge=key, retro=retro, earned_at=when)
+        UserBadge(user_id=user.id, badge=key, retro=is_retro(key.startswith("path-"), when), earned_at=when)
         for key, when in earned.badges.items() if key not in have_badges and key in BADGE_BY_KEY
     ]
     db.add_all(new_events + new_badges)
@@ -414,7 +440,7 @@ def badge_list(db: Session, user: User) -> list[dict]:
     return [
         {"key": b.key, "name": b.name, "description": b.description, "group": b.group,
          "earned": b.key in earned, "earned_at": earned.get(b.key)}
-        for b in BADGES
+        for b in ALL_BADGES
     ]
 
 
