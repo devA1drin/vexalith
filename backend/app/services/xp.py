@@ -591,13 +591,15 @@ def leaderboard(db: Session, user: User, period: str, now: datetime | None = Non
     db.commit()
     my_xp = totals.get(user.id, 0)
     my_level = level_for(all_xp.get(user.id, total_xp(db, user.id)))
+    my_st = settings.get(user.id) or db.get(UserSettings, user.id)
     you = {
         "rank": rank_of(my_xp) if my_xp > 0 else None,
         "xp": my_xp,
-        "name": public_name(me, user, settings[user.id].display_name if user.id in settings else ""),
+        "name": public_name(me, user, my_st.display_name if my_st is not None else ""),
         "level": my_level,
         "level_name": level_name(my_level),
         "visibility": me.visibility,
+        "avatar": board_avatar(me, my_st),
         "in_top": any(e["is_you"] for e in entries),
     }
     out = {"period": period, "entries": entries, "you": you, "ranked": len(visible)}
