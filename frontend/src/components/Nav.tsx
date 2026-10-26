@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import { Wordmark } from "@/components/Logo";
 import { NavLinks } from "@/components/NavLinks";
+import { XpChip } from "@/components/XpChip";
 
 export async function Nav() {
   const session = await auth();
@@ -22,6 +23,7 @@ export async function Nav() {
                 )}
                 <span className="max-w-[10rem] truncate text-sm text-ink-200">{user.name ?? user.email}</span>
               </div>
+              <XpChip />
               <form action={async () => { "use server"; await signOut({ redirectTo: "/" }); }}>
                 <button type="submit" className="btn-ghost">Sign out</button>
               </form>
