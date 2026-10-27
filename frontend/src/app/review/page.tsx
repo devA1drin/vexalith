@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { api, ApiError, type FilterOption, type ReviewFilters, type ReviewItem, type ReviewOut } from "@/lib/api";
 import { PageIntro } from "@/components/PageIntro";
 import { PracticeTabs } from "@/components/PracticeTabs";
+import { BookmarkButton } from "@/components/BookmarkButton";
 import { ago, LEVEL, until } from "@/lib/when";
 import { FILTER_KEYS, filtersQuery, readFilters } from "@/lib/reviewFilters";
 
@@ -277,6 +278,7 @@ function ItemCard({ item, i, busy, onRetry }: { item: ReviewItem; i: number; bus
               {busy ? "Opening…" : <>{check ? "Check it" : "Retry"} <span className="btn-arrow">→</span></>}
             </button>
             <span className="font-mono text-[11px] text-ink-500">{check ? "Right again = done for good" : "Get it right = fixed"}</span>
+            <BookmarkButton itemKey={item.key} className="ml-auto" />
           </div>
         </div>
       </div>

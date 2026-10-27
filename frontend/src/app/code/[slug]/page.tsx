@@ -1,5 +1,7 @@
 "use client";
 
+import { BookmarkButton } from "@/components/BookmarkButton";
+import { exerciseKey } from "@/lib/bookmarkStore";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api, ApiError, type ExerciseDetail, type SubmitOut } from "@/lib/api";
@@ -240,10 +242,11 @@ export default function ExercisePage({ params }: { params: Promise<{ slug: strin
             </span>
           )}
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="chip text-ink-100">{info.name}</span>
           <span className="chip">{ex.difficulty}</span>
           <span className="chip">{ex.topic}</span>
+          <BookmarkButton itemKey={exerciseKey(ex.slug)} className="ml-auto" />
         </div>
       </div>
 
