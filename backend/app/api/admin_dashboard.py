@@ -195,6 +195,18 @@ def question_create(body: NewQuestionBody, db: Session = Depends(get_db), admin:
     return {"saved": True, "notes": notes, "question": svc.question_detail(db, q.id)}
 
 
+class StyleBody(BaseModel):
+    question_text: str | None = Field(default=None, max_length=question_edits.MAX_TEXT)
+    reference_answer: str | None = Field(default=None, max_length=question_edits.MAX_TEXT)
+    key_idea: str | None = Field(default=None, max_length=question_edits.MAX_TEXT)
+
+
+@router.post("/style-check")
+def style_check(body: StyleBody, admin: User = Admin) -> dict:
+    """House-style notes for draft wording (saves nothing)."""
+    return {"notes": question_edits.style_notes(body.question_text, body.key_idea, body.reference_answer)}
+
+
 @router.get("/exercises")
 def exercises(db: Session = Depends(get_db), admin: User = Admin) -> dict:
     return {"items": svc.exercises(db)}

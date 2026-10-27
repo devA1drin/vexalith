@@ -327,6 +327,7 @@ def reset_xp(db: Session, user: User) -> int:
 
 # ----------------------------------------------------------------------------- questions
 
+RATE_MIN_ATTEMPTS = 3
 QUESTION_SORTS = ("id", "attempts", "pass_rate", "fail_rate", "rating")
 
 
@@ -359,7 +360,9 @@ def questions(db: Session, *, topic: str = "", language: str = "", difficulty: s
     if sort == "id":
         out.sort(key=lambda r: r["id"])
     else:
-        out.sort(key=lambda r: (r.get(sort) is None, -(r.get(sort) or 0), r["id"]))
+        # Rates from one or two answers are noise; rank questions with enough answers first.
+        thin = (lambda r: r["attempts"] < RATE_MIN_ATTEMPTS) if sort in ("pass_rate", "fail_rate") else (lambda r: False)
+        out.sort(key=lambda r: (r.get(sort) is None, thin(r), -(r.get(sort) or 0), -r["attempts"], r["id"]))
     total = len(out)
     domains = [{"slug": d.slug, "name": d.name} for d in db.query(SkillDomain).order_by(SkillDomain.name)]
     langs = sorted({r[0] for r in db.query(Question.language).distinct()})

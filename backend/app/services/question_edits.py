@@ -114,7 +114,7 @@ _DIRECTIONS = re.compile(
     r"|be (specific|detailed|clear)|show your (work|reasoning)|justify your answer|please)\b",
     re.I,
 )
-_LINE_BY_LINE = re.compile(r"\b(line by line|line \d+|on line|first line|second line|third line|step \d+)\b", re.I)
+_LINE_BY_LINE = re.compile(r"\b(line by line|line-by-line|lines? \d+|step \d+)\b", re.I)
 _NUMBERED = re.compile(r"^\s*(\d+[.)]|[-*])\s", re.M)
 
 

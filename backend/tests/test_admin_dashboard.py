@@ -322,3 +322,24 @@ def test_rating_rises_when_learners_miss():
 def test_exercises_stats(client, admins):
     items = client.get("/api/admin/exercises", headers=admins).json()["items"]
     assert len(items) >= 50 and {"slug", "runs", "solve_rate", "topic"} <= set(items[0])
+
+
+def test_style_notes_flag_walkthroughs_but_not_output_lines():
+    from app.services.question_edits import style_notes
+    walk = style_notes(question_text="What does this print?", key_idea="On line 2 the loop starts, then line 3 adds one to the total each pass, so the sum grows.", reference_answer="")
+    assert any("line-by-line" in n for n in walk)
+    output = style_notes(question_text="What does this print?", key_idea="Strings are immutable, so a method returns a new value and the old name still points at the original text.",
+                         reference_answer="The first line is ADA, the second line is 15 because the name never changed.")
+    assert not any("line-by-line" in n for n in output)
+
+
+def test_rate_sorts_rank_well_answered_questions_first(client, admins):
+    r = client.get("/api/admin/questions?sort=fail_rate", headers=admins)
+    assert r.status_code == 200
+    items = [i for i in r.json()["items"] if i["attempts"]]
+    thin_seen = False
+    for i in items:
+        if i["attempts"] < 3:
+            thin_seen = True
+        else:
+            assert not thin_seen, "a question with 3+ answers came after one with fewer"
