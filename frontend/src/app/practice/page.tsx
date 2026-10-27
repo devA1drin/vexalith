@@ -10,6 +10,10 @@ import { PageIntro } from "@/components/PageIntro";
 import { PromptText } from "@/components/PromptText";
 import { announceXp } from "@/lib/xp";
 import { PracticeTabs } from "@/components/PracticeTabs";
+import { BookmarkButton } from "@/components/BookmarkButton";
+import { ANSWER_LANGUAGE_LABEL, ANSWER_PLACEHOLDER, pickLanguage } from "@/lib/prefs";
+import { loadProfile, useAnswerLanguage } from "@/lib/profileStore";
+import { questionKey } from "@/lib/bookmarkStore";
 
 const LANG_KEY = "vexalith_language";
 const FOCUS_KEY = "vexalith_focus";
@@ -39,6 +43,7 @@ const LANGS: { id: Language; label: string }[] = [
 const LEVEL: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3 };
 
 export default function PracticePage() {
+  const answerLang = useAnswerLanguage();
   const [language, setLanguage] = useState<Language>("python");
   const [question, setQuestion] = useState<Question | null>(null);
   const [answer, setAnswer] = useState("");
@@ -101,28 +106,34 @@ export default function PracticePage() {
     // Links from recommendations / the daily challenge: ?language=&level=&topic=&question=
     const params = new URLSearchParams(window.location.search);
     const urlLang = params.get("language");
-    const saved = LANGUAGE_IDS.includes(urlLang as Language) ? urlLang : localStorage.getItem(LANG_KEY);
-    const lang: Language = LANGUAGE_IDS.includes(saved as Language) ? (saved as Language) : "python";
-    setLanguage(lang);
-    if (urlLang === lang) localStorage.setItem(LANG_KEY, lang);
-    const f: Focus | null = localStorage.getItem(FOCUS_KEY) === "fundamentals" ? "fundamentals" : null;
-    focusRef.current = f;
-    setFocus(f);
-    const urlLevel = params.get("level");
-    if (DIFFICULTY_IDS.includes(urlLevel as Difficulty)) localStorage.setItem(LEVEL_KEY, urlLevel as string);
-    const savedLevel = localStorage.getItem(LEVEL_KEY) as Difficulty | null;
-    const lvl: Difficulty = savedLevel && DIFFICULTY_IDS.includes(savedLevel) ? savedLevel : "adaptive";
-    const tp = params.get("topic");
-    const t = tp && tp in TOPIC_NAMES ? tp : null;
-    optsRef.current = { difficulty: lvl, topic: t };
-    setDifficulty(lvl);
-    setTopic(t);
-    const qid = Number(params.get("question"));
-    if (Number.isInteger(qid) && qid > 0) {
-      setBusy("load");
-      api.question(qid).then(show).catch(() => loadNext(lang)).finally(() => setBusy(null));
-    } else {
-      loadNext(lang);
+    const stored = localStorage.getItem(LANG_KEY);
+    const known = (v: string | null) => LANGUAGE_IDS.includes(v as Language);
+    // URL, then the last language used here, then the first one picked on the profile.
+    if (known(urlLang) || known(stored)) begin(pickLanguage(urlLang, stored, [], LANGUAGE_IDS));
+    else loadProfile().then((p) => begin(pickLanguage(null, null, p?.practice_languages ?? [], LANGUAGE_IDS)));
+
+    function begin(lang: Language) {
+      setLanguage(lang);
+      if (urlLang === lang) localStorage.setItem(LANG_KEY, lang);
+      const f: Focus | null = localStorage.getItem(FOCUS_KEY) === "fundamentals" ? "fundamentals" : null;
+      focusRef.current = f;
+      setFocus(f);
+      const urlLevel = params.get("level");
+      if (DIFFICULTY_IDS.includes(urlLevel as Difficulty)) localStorage.setItem(LEVEL_KEY, urlLevel as string);
+      const savedLevel = localStorage.getItem(LEVEL_KEY) as Difficulty | null;
+      const lvl: Difficulty = savedLevel && DIFFICULTY_IDS.includes(savedLevel) ? savedLevel : "adaptive";
+      const tp = params.get("topic");
+      const t = tp && tp in TOPIC_NAMES ? tp : null;
+      optsRef.current = { difficulty: lvl, topic: t };
+      setDifficulty(lvl);
+      setTopic(t);
+      const qid = Number(params.get("question"));
+      if (Number.isInteger(qid) && qid > 0) {
+        setBusy("load");
+        api.question(qid).then(show).catch(() => loadNext(lang)).finally(() => setBusy(null));
+      } else {
+        loadNext(lang);
+      }
     }
   }, [loadNext, show]);
 
@@ -340,6 +351,7 @@ export default function PracticePage() {
               </span>
             )}
             <span className="label ml-auto">#{String(question.id).padStart(3, "0")}</span>
+            <BookmarkButton itemKey={questionKey(question.id)} />
           </div>
           <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2">
             <div className="min-w-0 space-y-4">
@@ -353,18 +365,16 @@ export default function PracticePage() {
               <label className="flex flex-1 flex-col gap-2">
                 <span className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="label">{isBlank ? "The missing code (+ why, optional)" : "Your answer, in your own words"}</span>
-                  <span className="font-mono text-[11px] text-ink-500" data-testid="language-hint" lang="fil">English · Filipino · Taglish</span>
+                  <span className="font-mono text-[11px] text-ink-500" data-testid="language-hint" lang="fil">
+                    {answerLang === "en" ? "English · Filipino · Taglish" : `${ANSWER_LANGUAGE_LABEL[answerLang]} · or English`}
+                  </span>
                 </span>
                 <textarea
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
                   rows={8}
                   disabled={!!feedback || busy === "submit"}
-                  placeholder={
-                    isBlank
-                      ? "e.g. i += 1"
-                      : "Write your answer here. Casual words are fine."
-                  }
+                  placeholder={isBlank ? "e.g. i += 1" : ANSWER_PLACEHOLDER[answerLang].long}
                   className="input min-h-[11rem] flex-1 font-mono text-[13px] leading-6"
                 />
               </label>
