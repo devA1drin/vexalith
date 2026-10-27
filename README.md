@@ -263,6 +263,30 @@ The Bookmarks page lists them newest first. Filter by type, topic or language, a
 and remove ones you don't need (with Undo). **Practice my bookmarks** goes through the saved questions one by one,
 graded and scored like Practice. You can keep up to 500 bookmarks.
 
+## Admin dashboard
+
+People who run a Vexalith site get an **Admin** item in the menu under their mark, which opens `/admin`.
+Everyone else never sees the link. If they open `/admin` anyway they get a "403 admins only" page, and the
+admin API answers 403 (or 401 when signed out).
+
+- **Overview:** learners, people active in the last 7 and 30 days, answers, accuracy and code runs, a 30-day
+  activity chart, answers by topic and by language, code runs by exercise topic, and the questions missed most often.
+- **Learners:** search by name, handle, email or sign-in identity, page through everyone, and sort by last active, XP,
+  attempts or join date. This is the only page that shows emails. You can hide someone from the leaderboard,
+  reset their XP, or delete all their data. The last two ask you to type their handle first.
+- **Questions:** filter by topic, language, level, kind and status, and see attempts, pass rate and a 0–1000
+  difficulty rating for each question. You can edit the question, the explanation learners see and the model
+  answer, hide a question from learners, or add a new one. A house-style panel points out repeated directions and
+  line-by-line explanations as you type. Edits survive restarts.
+- **Exercises:** runs, learners and pass rate for every coding exercise.
+- **Feedback:** filter by status, category and rating. You can mark entries reviewed, hide them from the public
+  wall or delete them.
+- **Audit log:** every admin change, newest first. Entries name learners by number and handle, never by email.
+
+To make yourself an admin, set `ADMIN_IDENTITIES` on the backend to your sign-in identity, for example
+`github:12345678` (your numeric GitHub user id) or `google:1098…`. Separate several with commas.
+Once you've signed in, the Learners page shows each person's identity. If the setting is empty, nobody is an admin.
+
 ## Run it on your computer
 
 ### What you need
