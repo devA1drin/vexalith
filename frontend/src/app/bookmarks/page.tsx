@@ -91,10 +91,12 @@ export default function BookmarksPage() {
           </Link>
         )}
       </div>
-      <PageIntro>
-        Questions and coding exercises you saved with the Save button. Add a short note to remember why, then practise the
-        questions here with the usual grading.
-      </PageIntro>
+      {data && data.counts.total > 0 && (
+        <PageIntro>
+          Questions and coding exercises you saved with the Save button. Add a short note to remember why, then practise the
+          questions here with the usual grading.
+        </PageIntro>
+      )}
 
       {error && <p role="alert" className="border-l-2 border-signal pl-3 text-sm text-signal-soft">{error}</p>}
       {removed && (
