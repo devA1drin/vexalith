@@ -130,3 +130,6 @@ def seed_domains_and_questions(db: Session) -> None:
             q.prompt = item["prompt"]
             q.rubric = item["rubric"]
     db.commit()
+    from app.services.question_edits import apply_all
+
+    apply_all(db)  # admin edits outlive the reseed

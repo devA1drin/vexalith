@@ -33,6 +33,7 @@ from app.schemas.schemas import (
     QuestionOut,
 )
 from app.services import adaptive, daily, hints
+from app.services.question_edits import hidden_ids
 
 
 def ensure_user_masteries(db: Session, user: User) -> list[SkillMastery]:
@@ -232,9 +233,10 @@ def get_next_question(
     # ("general": logic puzzles, prose algorithm problems). "general" alone is
     # also a valid selection.
     pool_langs = [GENERAL] if language == GENERAL else [language, GENERAL]
-    all_in_lang = db.query(Question).filter(Question.language.in_(pool_langs)).all()
+    hidden = hidden_ids(db)
+    all_in_lang = [q for q in db.query(Question).filter(Question.language.in_(pool_langs)).all() if q.id not in hidden]
     if not all_in_lang:
-        all_in_lang = db.query(Question).all()
+        all_in_lang = [q for q in db.query(Question).all() if q.id not in hidden]
     if not all_in_lang:
         raise LookupError("No questions available — seed the database.")
     oop_id = next((d.id for d in domains.values() if d.slug == "oop"), None)

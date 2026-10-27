@@ -25,6 +25,7 @@ from app.schemas.schemas import (
 )
 from app.services import adaptive
 from app.services.learning import GENERAL, _diff, _question_out, ensure_user_masteries
+from app.services.question_edits import hidden_ids
 
 MAX_TOPICS = 3
 MAX_LANGUAGES = 2
@@ -62,7 +63,8 @@ def _topic_reason(mastery: float, attempts: int) -> str:
 def get_recommendations(db: Session, user: User, *, language: str | None = None) -> RecommendationsOut:
     language = language or _favourite_language(db, user)
     pool_langs = [GENERAL] if language == GENERAL else [language, GENERAL]
-    questions = db.query(Question).filter(Question.language.in_(pool_langs)).all()
+    hidden = hidden_ids(db)
+    questions = [q for q in db.query(Question).filter(Question.language.in_(pool_langs)).all() if q.id not in hidden]
     domains = {d.id: d for d in db.query(SkillDomain).all()}
     if language in ("html", "css"):
         oop_id = next((d.id for d in domains.values() if d.slug == "oop"), None)

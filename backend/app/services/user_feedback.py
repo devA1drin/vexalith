@@ -6,10 +6,11 @@ import re
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models.models import User, UserFeedback, UserSettings
+from app.models.models import FeedbackModeration, User, UserFeedback, UserSettings
 from app.schemas.schemas import PublicFeedbackOut, UserFeedbackCreate, UserFeedbackOut
 
 URL_RE = re.compile(r"https?://|www\.", re.I)
@@ -82,6 +83,8 @@ def list_recent_public(db: Session, limit: int = 20) -> list[PublicFeedbackOut]:
         db.query(UserFeedback, User, UserSettings)
         .join(User, User.id == UserFeedback.user_id)
         .outerjoin(UserSettings, UserSettings.user_id == User.id)
+        .outerjoin(FeedbackModeration, FeedbackModeration.feedback_id == UserFeedback.id)
+        .filter(or_(FeedbackModeration.hidden.is_(None), FeedbackModeration.hidden == 0))
         .order_by(UserFeedback.created_at.desc())
         .limit(limit)
         .all()
