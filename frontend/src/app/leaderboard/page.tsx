@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, type LeaderboardEntry, type LeaderboardOut, type Visibility, type XpProfile } from "@/lib/api";
+import Link from "next/link";
 import { LevelMark } from "@/components/BadgeMark";
+import { Avatar } from "@/components/Avatar";
+import { refreshProfile } from "@/lib/profileStore";
 import { RanksTabs } from "@/components/RanksTabs";
 
 type Period = "week" | "all";
@@ -91,7 +94,7 @@ function Board({ data }: { data: LeaderboardOut }) {
       {showYou && (
         <>
           <div className="border-t border-dashed border-ink-700 px-4 py-1 text-center font-mono text-[11px] text-ink-500">· · ·</div>
-          <Row e={{ rank: you.rank as number, name: you.name, xp: you.xp, level: you.level, level_name: you.level_name, is_you: true }} />
+          <Row e={{ rank: you.rank as number, name: you.name, xp: you.xp, level: you.level, level_name: you.level_name, is_you: true, avatar: you.avatar }} />
         </>
       )}
     </div>
@@ -106,7 +109,7 @@ function Row({ e }: { e: LeaderboardEntry }) {
     >
       <span className={`font-mono text-[15px] font-bold ${e.rank <= 3 ? "text-accent" : "text-ink-300"}`}>{e.rank}</span>
       <span className="flex min-w-0 items-center gap-2.5">
-        <LevelMark level={e.level} size={24} />
+        {e.avatar ? <Avatar mark={e.avatar} name={e.name} size={28} /> : <LevelMark level={e.level} size={24} />}
         <span className="min-w-0">
           <span className={`block truncate text-[15px] ${e.is_you ? "font-semibold text-ink-50" : "text-ink-100"}`}>
             {e.name}
@@ -152,6 +155,7 @@ function Appearance({ onChange }: { onChange: () => void }) {
     try {
       setP(await fn());
       onChange();
+      refreshProfile();
     } finally {
       setBusy(false);
     }
@@ -188,6 +192,9 @@ function Appearance({ onChange }: { onChange: () => void }) {
           <button type="button" className="btn-ghost mt-2 w-full" onClick={() => save(api.newHandle)} data-testid="new-handle">
             New random handle
           </button>
+          <Link href="/profile#leaderboard" className="block pt-1 text-center font-mono text-[12px] text-ink-400 underline-offset-4 hover:text-accent hover:underline">
+            Choose your own handle and mark
+          </Link>
         </fieldset>
       )}
     </section>

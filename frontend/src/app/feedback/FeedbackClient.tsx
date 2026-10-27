@@ -1,5 +1,6 @@
 "use client";
 
+import { Avatar } from "@/components/Avatar";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { api, type FeedbackCategory, type MyFeedback, type PublicFeedback } from "@/lib/api";
@@ -186,12 +187,7 @@ export function FeedbackClient({ signedIn, providers }: { signedIn: boolean; pro
             {wall.map((f) => (
               <li key={f.id} className="card p-4">
                 <div className="flex items-center gap-2">
-                  {f.author_avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={f.author_avatar_url} alt="" className="h-7 w-7 border border-ink-600" referrerPolicy="no-referrer" />
-                  ) : (
-                    <span className="flex h-7 w-7 items-center justify-center border border-ink-600 font-mono text-xs">{f.author_name.slice(0, 1)}</span>
-                  )}
+                  <Avatar mark={f.author_avatar ?? (f.author_avatar_url ? "photo" : "initials-ink")} name={f.author_name} photoUrl={f.author_avatar_url} size={28} />
                   <span className="truncate text-sm font-medium text-ink-100">{f.author_name}</span>
                   <span className="chip ml-auto">{LABEL[f.category]}</span>
                 </div>
