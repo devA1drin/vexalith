@@ -25,7 +25,10 @@ def domains() -> list[dict]:
 @router.get("/catalog")
 def catalog(db: Session = Depends(get_db)) -> dict:
     """How many questions the live database serves, per language and per question kind."""
-    rows = db.query(Question.language, Question.rubric).all()
+    from app.services.question_edits import hidden_ids
+
+    hidden = hidden_ids(db)
+    rows = [(lang, rub) for qid, lang, rub in db.query(Question.id, Question.language, Question.rubric) if qid not in hidden]
     by_lang = Counter(lang for lang, _ in rows)
     by_kind = Counter(((rubric or {}).get("kind") or "explain") for _, rubric in rows)
     return {
