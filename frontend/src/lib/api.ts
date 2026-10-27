@@ -425,6 +425,8 @@ export type Profile = {
   visibility: Visibility;
   leaderboard_name: string | null;
   provider: string;
+  /** Only true for accounts listed in the backend's ADMIN_IDENTITIES. */
+  is_admin?: boolean;
   joined_at: string | null;
   limits: { name: [number, number]; handle: [number, number]; bio: number };
 };
