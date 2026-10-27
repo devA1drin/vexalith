@@ -15,3 +15,16 @@ export function pickLanguage(url: string | null, stored: string | null, preferre
   for (const v of [url, stored, preferred[0]]) if (v && all.includes(v)) return v as Language;
   return "python";
 }
+
+export const LANGUAGE_LABELS: Record<Language, string> = {
+  python: "Python", javascript: "JavaScript", php: "PHP", cpp: "C++", java: "Java", html: "HTML", css: "CSS", general: "General",
+};
+
+/** Only the fields that changed, so a save never touches anything else. */
+export function changedFields<T extends Record<string, unknown>>(before: T, after: T): Partial<T> {
+  const out: Partial<T> = {};
+  for (const k of Object.keys(after) as (keyof T)[]) {
+    if (JSON.stringify(before[k]) !== JSON.stringify(after[k])) out[k] = after[k];
+  }
+  return out;
+}
