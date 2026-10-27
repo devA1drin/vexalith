@@ -33,6 +33,16 @@ export default function QuizSetupPage() {
     Promise.all([api.quizOptions(), api.quizHistory()]).then(([o, h]) => {
       setOpts(o);
       setHist(h);
+      // With no settings in the link, start from the learner's saved defaults (from their profile).
+      const d = q.toString() ? null : o.defaults;
+      if (d) {
+        setScope(d.scope);
+        setValue(d.value);
+        setLength(d.length);
+        setMinutes(d.minutes);
+        setInstant(d.instant);
+        return;
+      }
       const s = (q.get("scope") as QuizScope) || "language";
       const sc = o.scopes[s] ? s : "language";
       const want = q.get("value") ?? (sc === "language" ? localStorage.getItem("vexalith_language") : null);
@@ -154,6 +164,9 @@ export default function QuizSetupPage() {
                 {busy ? "Starting…" : <>Start · {Math.min(length, scope === "mixed" ? length : pool || length)} questions · {minutes}:00 <span className="btn-arrow">→</span></>}
               </button>
               {opts.active && <span className="font-mono text-[11px] text-ink-500">Finish the running quiz first.</span>}
+              <Link href="/profile#quiz" className="ml-auto font-mono text-[11px] text-ink-500 underline-offset-4 hover:text-accent hover:underline" data-testid="quiz-defaults-link">
+                {opts.defaults ? "Started from your saved settings · change" : "Save these as your defaults"}
+              </Link>
             </div>
           </section>
 

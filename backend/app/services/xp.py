@@ -45,6 +45,7 @@ from app.models.models import (
     SkillMastery,
     User,
     UserBadge,
+    UserSettings,
     XpEvent,
 )
 from app.services.daily import MANILA, manila_today
@@ -368,8 +369,13 @@ def ensure_profile(db: Session, user: User) -> LearnerProfile:
     raise RuntimeError("Couldn't create a leaderboard profile")
 
 
-def _safe_name(user: User) -> str:
-    """The learner's own display name, only when they chose to show it. Never an email."""
+def _safe_name(user: User, chosen: str = "") -> str:
+    """The learner's own display name, only when they chose to show it. Never an email.
+
+    ``chosen`` is the name they set on their profile page; it wins over the sign-in name.
+    """
+    if chosen and "@" not in chosen:
+        return chosen[:40]
     name = (user.display_name or "").strip()
     if not name or "@" in name:
         return ""
@@ -379,9 +385,25 @@ def _safe_name(user: User) -> str:
     return name[:40]
 
 
-def public_name(profile: LearnerProfile, user: User) -> str:
+# Generated avatar marks, drawn in the browser (see the profile page).
+AVATAR_MARKS = (
+    "initials-lime", "initials-ink", "initials-signal", "initials-outline",
+    "mark-grid", "mark-circuit", "mark-stripes", "mark-dots", "mark-bracket", "mark-stack",
+)
+
+
+def board_avatar(profile: LearnerProfile | None, settings: UserSettings | None) -> str | None:
+    """The generated mark shown next to a leaderboard name. Never the sign-in photo, and
+    nothing for anonymous learners."""
+    if profile is None or profile.visibility not in ("handle", "name"):
+        return None
+    a = settings.avatar if settings is not None else ""
+    return a if a in AVATAR_MARKS else "initials-ink"
+
+
+def public_name(profile: LearnerProfile, user: User, chosen: str = "") -> str:
     if profile.visibility == "name":
-        return _safe_name(user) or profile.handle
+        return _safe_name(user, chosen) or profile.handle
     if profile.visibility == "anonymous":
         return "Anonymous learner"
     return profile.handle
@@ -544,6 +566,7 @@ def leaderboard(db: Session, user: User, period: str, now: datetime | None = Non
     totals = {uid: int(xp or 0) for uid, xp in q.group_by(XpEvent.user_id).all()}
     profiles = {p.user_id: p for p in db.query(LearnerProfile).filter(LearnerProfile.user_id.in_(list(totals) or [0])).all()}
     users = {u.id: u for u in db.query(User).filter(User.id.in_(list(totals) or [0])).all()}
+    settings = {r.user_id: r for r in db.query(UserSettings).filter(UserSettings.user_id.in_(list(totals) or [0])).all()}
     all_xp = _all_time(db, list(totals)) if start is not None else totals
 
     visible = [
@@ -557,22 +580,26 @@ def leaderboard(db: Session, user: User, period: str, now: datetime | None = Non
 
     def entry(uid: int, xp: int) -> dict:
         p = profiles.get(uid)
-        name = public_name(p, users[uid]) if p else "Anonymous learner"
+        st = settings.get(uid)
+        name = public_name(p, users[uid], st.display_name if st else "") if p else "Anonymous learner"
         level = level_for(all_xp.get(uid, xp))
-        return {"rank": rank_of(xp), "name": name, "xp": xp, "level": level, "level_name": level_name(level), "is_you": uid == user.id}
+        return {"rank": rank_of(xp), "name": name, "xp": xp, "level": level, "level_name": level_name(level),
+                "avatar": board_avatar(p, st), "is_you": uid == user.id}
 
     entries = [entry(uid, xp) for uid, xp in visible[:LEADERBOARD_SIZE]]
     me = ensure_profile(db, user)
     db.commit()
     my_xp = totals.get(user.id, 0)
     my_level = level_for(all_xp.get(user.id, total_xp(db, user.id)))
+    my_st = settings.get(user.id) or db.get(UserSettings, user.id)
     you = {
         "rank": rank_of(my_xp) if my_xp > 0 else None,
         "xp": my_xp,
-        "name": public_name(me, user),
+        "name": public_name(me, user, my_st.display_name if my_st is not None else ""),
         "level": my_level,
         "level_name": level_name(my_level),
         "visibility": me.visibility,
+        "avatar": board_avatar(me, my_st),
         "in_top": any(e["is_you"] for e in entries),
     }
     out = {"period": period, "entries": entries, "you": you, "ranked": len(visible)}

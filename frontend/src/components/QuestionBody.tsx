@@ -5,6 +5,10 @@ import type { Question } from "@/lib/api";
 import { CodeBlock } from "@/components/CodeBlock";
 import { PromptText } from "@/components/PromptText";
 import { LEVEL } from "@/lib/when";
+import { BookmarkButton } from "@/components/BookmarkButton";
+import { questionKey } from "@/lib/bookmarkStore";
+import { ANSWER_LANGUAGE_LABEL, ANSWER_PLACEHOLDER } from "@/lib/prefs";
+import { useAnswerLanguage } from "@/lib/profileStore";
 
 /** One question with an answer box, shared by Review practice and Timed quiz. */
 export function QuestionBody({
@@ -25,6 +29,7 @@ export function QuestionBody({
   rows?: number;
 }) {
   const level = LEVEL[question.difficulty] ?? 1;
+  const answerLang = useAnswerLanguage();
   const blank = question.kind === "fill_blank";
   return (
     <article className="card q-enter" data-question-id={question.id} data-testid="question-body">
@@ -37,6 +42,7 @@ export function QuestionBody({
           <span className="ml-1">{question.difficulty}</span>
         </span>
         {blank && <span className="chip border-accent text-accent">Missing code</span>}
+        <BookmarkButton itemKey={questionKey(question.id)} className="ml-auto" />
       </div>
       <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2">
         <div className="min-w-0 space-y-4">
@@ -48,14 +54,16 @@ export function QuestionBody({
           <label className="flex flex-col gap-2">
             <span className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="label">{blank ? "The missing code" : "Your answer, in your own words"}</span>
-              <span className="font-mono text-[11px] text-ink-500" lang="fil">English · Filipino · Taglish</span>
+              <span className="font-mono text-[11px] text-ink-500" lang="fil">
+                {answerLang === "en" ? "English · Filipino · Taglish" : `${ANSWER_LANGUAGE_LABEL[answerLang]} · or English`}
+              </span>
             </span>
             <textarea
               value={answer}
               onChange={(e) => onAnswer(e.target.value)}
               rows={blank ? 3 : rows}
               disabled={disabled}
-              placeholder={blank ? "e.g. i += 1" : "A sentence or two is enough."}
+              placeholder={blank ? "e.g. i += 1" : ANSWER_PLACEHOLDER[answerLang].short}
               className="input font-mono text-[13px] leading-6"
               data-testid="answer"
             />

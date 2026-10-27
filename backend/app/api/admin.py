@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.session import get_db
-from app.models.models import DailyCompletion, ExerciseAttempt, ExerciseHelp, Feedback, HintUsage, LearnerProfile, PathActivity, PathSkip, QuestionSkip, QuizAnswer, QuizSession, Response, ReviewRetry, SkillMastery, User, UserBadge, UserFeedback, XpEvent
+from app.models.models import Bookmark, DailyCompletion, ExerciseAttempt, ExerciseHelp, Feedback, HintUsage, LearnerProfile, PathActivity, PathSkip, QuestionSkip, QuizAnswer, QuizSession, Response, ReviewRetry, SkillMastery, User, UserBadge, UserFeedback, UserSettings, XpEvent
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -59,6 +59,8 @@ def purge_users(body: PurgeRequest, db: Session = Depends(get_db)) -> dict:
             "path_skips": len(list(db.scalars(select(PathSkip.id).where(PathSkip.user_id == user.id)))),
             "quizzes": len(list(db.scalars(select(QuizSession.id).where(QuizSession.user_id == user.id)))),
             "review_retries": len(list(db.scalars(select(ReviewRetry.id).where(ReviewRetry.user_id == user.id)))),
+            "bookmarks": len(list(db.scalars(select(Bookmark.id).where(Bookmark.user_id == user.id)))),
+            "settings": len(list(db.scalars(select(UserSettings.user_id).where(UserSettings.user_id == user.id)))),
         }
         if not body.dry_run:
             if resp_ids:
@@ -80,6 +82,8 @@ def purge_users(body: PurgeRequest, db: Session = Depends(get_db)) -> dict:
             db.execute(delete(LearnerProfile).where(LearnerProfile.user_id == user.id))
             db.execute(delete(PathActivity).where(PathActivity.user_id == user.id))
             db.execute(delete(PathSkip).where(PathSkip.user_id == user.id))
+            db.execute(delete(Bookmark).where(Bookmark.user_id == user.id))
+            db.execute(delete(UserSettings).where(UserSettings.user_id == user.id))
             db.execute(delete(User).where(User.id == user.id))
         report.append({"identity": ident, "found": True, "name": user.display_name, **counts})
     if not body.dry_run:

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import { Wordmark } from "@/components/Logo";
 import { NavLinks } from "@/components/NavLinks";
+import { ProfileMenu } from "@/components/ProfileMenu";
 import { XpChip } from "@/components/XpChip";
 
 export async function Nav() {
@@ -14,19 +15,14 @@ export async function Nav() {
         <div className="flex items-center gap-3 sm:order-3">
           {user ? (
             <>
-              <div className="hidden items-center gap-2 md:flex">
-                {user.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={user.image} alt="" className="h-7 w-7 border border-ink-600" referrerPolicy="no-referrer" />
-                ) : (
-                  <span className="flex h-7 w-7 items-center justify-center border border-ink-600 font-mono text-xs">{(user.name ?? "?").slice(0, 1).toUpperCase()}</span>
-                )}
-                <span className="max-w-[10rem] truncate text-sm text-ink-200">{user.name ?? user.email}</span>
-              </div>
               <XpChip />
-              <form action={async () => { "use server"; await signOut({ redirectTo: "/" }); }}>
-                <button type="submit" className="btn-ghost">Sign out</button>
-              </form>
+              <ProfileMenu fallbackName={user.name && !user.name.includes("@") ? user.name : "Learner"}>
+                <form action={async () => { "use server"; await signOut({ redirectTo: "/" }); }}>
+                  <button type="submit" role="menuitem" className="block w-full px-3 py-2 text-left font-mono text-[12px] uppercase tracking-wider text-ink-300 hover:bg-ink-900 hover:text-signal-soft" data-testid="sign-out">
+                    Sign out
+                  </button>
+                </form>
+              </ProfileMenu>
             </>
           ) : (
             <Link href="/login" className="btn-primary px-3 py-1.5 text-[12px]">Sign in</Link>

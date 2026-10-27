@@ -136,6 +136,8 @@ export type PublicFeedback = {
   id: number;
   author_name: string;
   author_avatar_url: string | null;
+  /** A generated mark the author picked (shown instead of a photo). */
+  author_avatar?: string | null;
   rating: number;
   category: FeedbackCategory;
   message: string;
@@ -216,11 +218,11 @@ export type XpNews = {
 };
 export type XpSyncOut = LevelInfo & { news: XpNews };
 export type Visibility = "handle" | "name" | "anonymous" | "hidden";
-export type LeaderboardEntry = { rank: number; name: string; xp: number; level: number; level_name: string; is_you: boolean };
+export type LeaderboardEntry = { rank: number; name: string; xp: number; level: number; level_name: string; is_you: boolean; avatar: string | null };
 export type LeaderboardOut = {
   period: "week" | "all";
   entries: LeaderboardEntry[];
-  you: { rank: number | null; xp: number; name: string; level: number; level_name: string; visibility: Visibility; in_top: boolean };
+  you: { rank: number | null; xp: number; name: string; level: number; level_name: string; visibility: Visibility; in_top: boolean; avatar: string | null };
   ranked: number;
   week_start?: string;
   week_end?: string;
@@ -228,7 +230,8 @@ export type LeaderboardOut = {
 export type XpProfile = { visibility: Visibility; handle: string; shown_as: string | null; name_available: boolean; name: string | null };
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  /** For form errors: the field the message is about. */
+  constructor(message: string, public status: number, public field?: string) {
     super(message);
   }
 }
@@ -338,6 +341,8 @@ export type QuizOptions = {
   minutes: number[];
   active: QuizBrief | null;
   rules: QuizRules;
+  /** The learner's saved quiz settings from their profile, if any. */
+  defaults: QuizStartBody | null;
 };
 export type QuizSlot = { position: number; state: "open" | "answered" | "skipped"; verdict: FeedbackPayload["verdict"] | null };
 export type QuizState = QuizBrief & {
@@ -402,6 +407,73 @@ export type QuizHistory = {
 };
 export type QuizStartBody = { scope: QuizScope; value: string; length: number; minutes: number; instant: boolean };
 
+// ── Profile ──
+export type AnswerLanguage = "en" | "fil" | "taglish";
+export type Profile = {
+  display_name: string;
+  sign_in_name: string;
+  shown_name: string;
+  avatar: string;
+  avatars: string[];
+  photo_url: string | null;
+  leaderboard_avatar: string | null;
+  bio: string;
+  practice_languages: Language[];
+  answer_language: AnswerLanguage;
+  quiz_defaults: QuizStartBody | null;
+  handle: string;
+  visibility: Visibility;
+  leaderboard_name: string | null;
+  provider: string;
+  joined_at: string | null;
+  limits: { name: [number, number]; handle: [number, number]; bio: number };
+};
+export type ProfileUpdate = Partial<{
+  display_name: string;
+  handle: string;
+  visibility: Visibility;
+  avatar: string;
+  bio: string;
+  practice_languages: Language[];
+  answer_language: AnswerLanguage;
+  quiz_defaults: QuizStartBody | null;
+}>;
+export type HandleCheck = { handle: string; available: boolean; reason: string };
+export type ProfileSummary = LevelInfo & {
+  badges_earned: number;
+  badges_total: number;
+  paths: { slug: string; name: string; mark: string; steps_done: number; steps_total: number; progress: number; started: boolean; finished: boolean }[];
+  paths_finished: number;
+  bookmarks: number;
+  joined_at: string | null;
+};
+
+// ── Bookmarks ──
+export type BookmarkKind = "question" | "exercise";
+export type Bookmark = {
+  key: string;
+  kind: BookmarkKind;
+  id: number | null;
+  slug: string | null;
+  title: string;
+  language: string;
+  topic: string;
+  topic_name: string;
+  difficulty: string;
+  question_kind: "explain" | "fill_blank" | "code";
+  note: string;
+  saved_at: string;
+  result: "right" | "partial" | "wrong" | "solved" | "failed" | "new";
+};
+export type BookmarkFilters = { kind?: "" | BookmarkKind; topic?: string; language?: string };
+export type BookmarksOut = {
+  items: Bookmark[];
+  counts: { total: number; questions: number; exercises: number; shown: number };
+  filters: { topics: FilterOption[]; languages: FilterOption[] };
+  limits: { note: number; max: number };
+};
+export type BookmarkSaved = { key: string; saved: boolean; note: string };
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api/backend${path}`, {
     ...init,
@@ -410,14 +482,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     let detail: unknown = res.statusText;
+    let field: string | undefined;
     try {
       const body = await res.json();
       detail = body.detail ?? body;
+      if (typeof body.field === "string") field = body.field;
     } catch {
       /* ignore */
     }
     if (Array.isArray(detail)) detail = detail.map((d) => d?.msg ?? JSON.stringify(d)).join("; ");
-    throw new ApiError(typeof detail === "string" ? detail : JSON.stringify(detail), res.status);
+    throw new ApiError(typeof detail === "string" ? detail : JSON.stringify(detail), res.status, field);
   }
   return res.json() as Promise<T>;
 }
@@ -479,6 +553,23 @@ export const api = {
   retryQuestion: (id: number) => request<{ ok: boolean }>(`/review/questions/${id}/retry`, { method: "POST", body: "{}" }),
   retryExercise: (slug: string) => request<{ ok: boolean }>(`/review/exercises/${encodeURIComponent(slug)}/retry`, { method: "POST", body: "{}" }),
   quizOptions: () => request<QuizOptions>("/quiz/options"),
+  profile: () => request<Profile>("/profile"),
+  saveProfile: (body: ProfileUpdate) => request<Profile>("/profile", { method: "PUT", body: JSON.stringify(body) }),
+  checkHandle: (handle: string) => request<HandleCheck>(`/profile/handle?${new URLSearchParams({ handle })}`),
+  profileSummary: () => request<ProfileSummary>("/profile/summary"),
+  bookmarks: (f: BookmarkFilters = {}) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(f)) if (v) q.set(k, v);
+    const qs = q.toString();
+    return request<BookmarksOut>(`/bookmarks${qs ? `?${qs}` : ""}`);
+  },
+  bookmarkKeys: () => request<{ keys: string[] }>("/bookmarks/keys"),
+  /** ``key`` is "q:<id>" or "x:<slug>". Leave ``note`` out to keep the current one. */
+  setBookmark: (key: string, saved: boolean, note?: string) =>
+    request<BookmarkSaved>(
+      key.startsWith("q:") ? `/bookmarks/questions/${Number(key.slice(2))}` : `/bookmarks/exercises/${encodeURIComponent(key.slice(2))}`,
+      { method: "PUT", body: JSON.stringify(note === undefined ? { saved } : { saved, note }) },
+    ),
   quizHistory: () => request<QuizHistory>("/quiz/history"),
   startQuiz: (body: QuizStartBody) => request<QuizState>("/quiz", { method: "POST", body: JSON.stringify(body) }),
   quiz: (id: number) => request<QuizState>(`/quiz/${id}`),

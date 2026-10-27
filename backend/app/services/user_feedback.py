@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models.models import User, UserFeedback
+from app.models.models import User, UserFeedback, UserSettings
 from app.schemas.schemas import PublicFeedbackOut, UserFeedbackCreate, UserFeedbackOut
 
 URL_RE = re.compile(r"https?://|www\.", re.I)
@@ -79,21 +79,28 @@ def list_mine(db: Session, user: User, limit: int = 50) -> list[UserFeedbackOut]
 
 def list_recent_public(db: Session, limit: int = 20) -> list[PublicFeedbackOut]:
     rows = (
-        db.query(UserFeedback, User)
+        db.query(UserFeedback, User, UserSettings)
         .join(User, User.id == UserFeedback.user_id)
+        .outerjoin(UserSettings, UserSettings.user_id == User.id)
         .order_by(UserFeedback.created_at.desc())
         .limit(limit)
         .all()
     )
+
+    def mark(st: UserSettings | None) -> str | None:
+        return st.avatar if st is not None and st.avatar and st.avatar != "photo" else None
+
     return [
         PublicFeedbackOut(
             id=f.id,
-            author_name=u.display_name,
-            author_avatar_url=u.avatar_url,
+            # The name and mark chosen on the profile page win over the sign-in ones.
+            author_name=(st.display_name if st is not None and st.display_name else u.display_name),
+            author_avatar_url=None if mark(st) else u.avatar_url,
+            author_avatar=mark(st),
             rating=f.rating,
             category=f.category,
             message=f.message,
             created_at=f.created_at,
         )
-        for f, u in rows
+        for f, u, st in rows
     ]

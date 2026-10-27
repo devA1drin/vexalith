@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.db.session import get_db
 from app.models.models import User
-from app.services import xp
+from app.services import profile, xp
 
 router = APIRouter(tags=["xp"])
 
@@ -47,13 +47,14 @@ class ProfileIn(BaseModel):
 def _profile_out(db: Session, user: User) -> dict:
     p = xp.ensure_profile(db, user)
     db.commit()
+    chosen = profile.chosen_name(profile.peek_settings(db, user.id))
     return {
         "visibility": p.visibility,
         "handle": p.handle,
-        "shown_as": None if p.visibility == "hidden" else xp.public_name(p, user),
+        "shown_as": None if p.visibility == "hidden" else xp.public_name(p, user, chosen),
         # Only offered when it's a real name (never an email).
-        "name_available": bool(xp._safe_name(user)),
-        "name": xp._safe_name(user) or None,
+        "name_available": bool(xp._safe_name(user, chosen)),
+        "name": xp._safe_name(user, chosen) or None,
     }
 
 

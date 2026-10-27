@@ -1,5 +1,9 @@
 "use client";
 
+import { BookmarkButton } from "@/components/BookmarkButton";
+import { questionKey } from "@/lib/bookmarkStore";
+import { ANSWER_PLACEHOLDER } from "@/lib/prefs";
+import { useAnswerLanguage } from "@/lib/profileStore";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -15,6 +19,7 @@ import { announceXp } from "@/lib/xp";
 const LEVEL: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3 };
 
 export default function StepPage() {
+  const answerLang = useAnswerLanguage();
   const params = useParams<{ slug: string; step: string }>();
   const slug = params.slug;
   const number = Number(params.step);
@@ -190,6 +195,7 @@ export default function StepPage() {
                     {question.language !== "general" && <span className="chip">{question.language === "cpp" ? "C++" : question.language}</span>}
                     {isBlank && <span className="chip border-accent text-accent">Missing code</span>}
                     <span className="label ml-auto">#{String(question.id).padStart(3, "0")}</span>
+                    <BookmarkButton itemKey={questionKey(question.id)} />
                   </div>
                   <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-2">
                     <div className="min-w-0 space-y-4">
@@ -210,7 +216,7 @@ export default function StepPage() {
                           onChange={(e) => setAnswer(e.target.value)}
                           rows={7}
                           disabled={!!feedback || busy === "submit"}
-                          placeholder={isBlank ? "e.g. i += 1" : "Write your answer here. Casual words are fine."}
+                          placeholder={isBlank ? "e.g. i += 1" : ANSWER_PLACEHOLDER[answerLang].long}
                           className="input min-h-[10rem] flex-1 font-mono text-[13px] leading-6"
                         />
                       </label>

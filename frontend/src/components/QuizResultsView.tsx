@@ -1,5 +1,7 @@
 "use client";
 
+import { BookmarkButton } from "@/components/BookmarkButton";
+import { questionKey } from "@/lib/bookmarkStore";
 import Link from "next/link";
 import type { QuizResults, QuizReviewRow } from "@/lib/api";
 import { BadgeMark } from "@/components/BadgeMark";
@@ -99,6 +101,8 @@ function Row({ q }: { q: QuizReviewRow }) {
           <span className={`chip ${tone}`}>{word}</span>
           <span className="min-w-0 flex-1 basis-40 break-words font-display text-[16px] font-semibold text-ink-50">{q.title}</span>
           <span className="font-mono text-[11px] uppercase text-ink-500">{q.language} · {q.topic_name}</span>
+          {/* Saving shouldn't open or close the row. */}
+          <span onClick={(e) => e.preventDefault()}><BookmarkButton itemKey={questionKey(q.question_id)} compact /></span>
           <span className="text-ink-500 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
         </summary>
         <div className="grid gap-4 border-t border-ink-800 p-4 sm:p-5 lg:grid-cols-2">

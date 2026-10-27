@@ -239,6 +239,29 @@ It shows the top 50, plus your own rank if you're further down.
 Your email is never shown. You appear under a random handle like "Swift Parser 42", not your name.
 Under **How you appear** you can switch to your name, show as "Anonymous learner", hide yourself from the board,
 or get a new random handle.
+You can also pick your own handle on your [profile](#profile-and-bookmarks).
+
+## Profile and bookmarks
+
+Open the menu under your mark in the top bar to find **Profile** and **Bookmarks**.
+
+**Profile** is where you change how you appear and how the site starts for you:
+
+- **Display name** (2 to 40 characters) and a short **bio** (up to 160 characters, optional).
+- **Mark:** your photo from sign-in, your initials in one of four styles, or one of six patterns made from your name. Nothing is uploaded.
+- **Leaderboard:** your own handle (3 to 24 letters, numbers, spaces, dots, dashes or underscores, and nobody else can have it)
+  and who sees you there. This is the same setting as on the Leaderboard page.
+- **Practice:** the languages you practise most (the first one opens by default) and the language you answer in:
+  English, Filipino or Taglish. The answer box hints at it; the grading is the same.
+- **Quiz defaults:** the topic, length, time and feedback style the quiz page starts with.
+- A summary of your level, XP, badges, paths and the day you joined.
+
+Your email is never shown anywhere. Every field is checked on the server; if one is wrong, nothing is saved and the field says why.
+
+**Bookmarks:** press **Save** on a question (in Practice, Review, a path step or a quiz's results) or on a coding exercise.
+The Bookmarks page lists them newest first. Filter by type, topic or language, add a note of up to 140 characters,
+and remove ones you don't need (with Undo). **Practice my bookmarks** goes through the saved questions one by one,
+graded and scored like Practice. You can keep up to 500 bookmarks.
 
 ## Run it on your computer
 

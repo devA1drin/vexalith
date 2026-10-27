@@ -12,6 +12,7 @@ User ──< DailyCompletion >── Question (daily challenge done, one row per
 Response ── Feedback (1:1)       (AI feedback on an answer)
 User ──< ExerciseAttempt          (browser coding exercise runs; code never runs on the server)
 AppMeta                          (schema version for safe re-seeding)
+User ──1 UserSettings, User ──< Bookmark   (profile choices and saved items)
 """
 
 from __future__ import annotations
@@ -413,3 +414,40 @@ class ReviewRetry(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     item: Mapped[str] = mapped_column(String(80))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+# --- Profile and bookmarks (new tables, additive; see services/profile.py, services/bookmarks.py) ---
+
+
+class UserSettings(Base):
+    """What a learner chose on their profile page. Never holds an email.
+
+    ``display_name`` overrides the name from GitHub/Google (which is refreshed on every
+    sign-in, so it can't be edited in place). Empty means "use the sign-in name".
+    The leaderboard handle and visibility stay in LearnerProfile.
+    """
+
+    __tablename__ = "user_settings"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    display_name: Mapped[str] = mapped_column(String(40), default="")
+    avatar: Mapped[str] = mapped_column(String(32), default="")
+    bio: Mapped[str] = mapped_column(String(200), default="")
+    practice_languages: Mapped[list] = mapped_column(JSON, default=list)
+    answer_language: Mapped[str] = mapped_column(String(8), default="en")  # en | fil | taglish
+    quiz_defaults: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class Bookmark(Base):
+    """A saved question ("q:<id>") or coding exercise ("x:<slug>"), with an optional short note."""
+
+    __tablename__ = "bookmarks"
+    __table_args__ = (UniqueConstraint("user_id", "item", name="uq_bookmark_item"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    item: Mapped[str] = mapped_column(String(80))
+    note: Mapped[str] = mapped_column(String(200), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

@@ -46,6 +46,10 @@ const RULES: Rule[] = [
   { method: "POST", pattern: /^quiz$/ },
   { method: "GET", pattern: /^quiz\/\d{1,10}(\/results)?$/ },
   { method: "POST", pattern: /^quiz\/\d{1,10}\/(answer|skip|finish)$/ },
+  { method: "GET", pattern: /^profile(\/summary|\/handle)?$/ },
+  { method: "PUT", pattern: /^profile$/ },
+  { method: "GET", pattern: /^bookmarks(\/keys)?$/ },
+  { method: "PUT", pattern: /^bookmarks\/(questions\/\d{1,10}|exercises\/[a-z0-9-]{1,64})$/ },
   { method: "GET", pattern: /^feedback\/recent$/, public: true },
   { method: "GET", pattern: /^(languages|domains|health)$/, public: true },
 ];
