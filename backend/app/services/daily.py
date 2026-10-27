@@ -20,6 +20,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.models.models import DailyCompletion, Question, SkillDomain, User
+from app.services.question_edits import hidden_ids
 
 MANILA = timezone(timedelta(hours=8), "Asia/Manila")
 EPOCH = date(2026, 1, 1)
@@ -58,7 +59,8 @@ def pick_for(db: Session, day: date) -> DailyPick:
     """The daily challenge for ``day`` (deterministic, same for everyone)."""
     idx = (day - EPOCH).days
     domains = {d.id: d for d in db.query(SkillDomain).all()}
-    seeds = db.query(Question).filter(Question.source == "seed").all() or db.query(Question).all()
+    hidden = hidden_ids(db)
+    seeds = [q for q in db.query(Question).filter(Question.source == "seed").all() if q.id not in hidden] or db.query(Question).all()
     if not seeds:
         raise LookupError("No questions available — seed the database.")
     language = ROTATION[idx % len(ROTATION)]

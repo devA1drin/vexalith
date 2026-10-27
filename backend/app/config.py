@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     backend_jwt_secret: str = ""
     # Optional admin maintenance token (sensitive). Admin routes are disabled when unset.
     admin_token: str = ""
+    # Who may open the admin dashboard: comma-separated sign-in identities, "provider:account_id"
+    # (e.g. "github:1234567"). Not secret. Nobody is an admin while it is empty.
+    admin_identities: str = ""
 
     # Product feedback spam protection
     feedback_max_per_hour: int = 5
@@ -84,6 +87,10 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def admin_identity_set(self) -> set[str]:
+        return {p.strip().lower() for p in self.admin_identities.split(",") if p.strip()}
 
     @property
     def llm_configured(self) -> bool:

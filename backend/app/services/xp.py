@@ -569,9 +569,14 @@ def leaderboard(db: Session, user: User, period: str, now: datetime | None = Non
     settings = {r.user_id: r for r in db.query(UserSettings).filter(UserSettings.user_id.in_(list(totals) or [0])).all()}
     all_xp = _all_time(db, list(totals)) if start is not None else totals
 
+    from app.models.models import LearnerFlag
+
+    # Learners an admin took off the board are left out the same way.
+    board_hidden = {uid for (uid,) in db.query(LearnerFlag.user_id).filter(LearnerFlag.board_hidden == 1)}
     visible = [
         (uid, xp) for uid, xp in totals.items()
-        if xp > 0 and uid in users and (uid not in profiles or profiles[uid].visibility != "hidden")
+        if xp > 0 and uid in users and uid not in board_hidden
+        and (uid not in profiles or profiles[uid].visibility != "hidden")
     ]
     visible.sort(key=lambda t: (-t[1], t[0]))
 
@@ -593,7 +598,7 @@ def leaderboard(db: Session, user: User, period: str, now: datetime | None = Non
     my_level = level_for(all_xp.get(user.id, total_xp(db, user.id)))
     my_st = settings.get(user.id) or db.get(UserSettings, user.id)
     you = {
-        "rank": rank_of(my_xp) if my_xp > 0 else None,
+        "rank": rank_of(my_xp) if my_xp > 0 and user.id not in board_hidden else None,
         "xp": my_xp,
         "name": public_name(me, user, my_st.display_name if my_st is not None else ""),
         "level": my_level,

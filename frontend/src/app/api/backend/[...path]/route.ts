@@ -6,11 +6,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { backendUrl, mintBackendToken } from "@/lib/backend";
+import { ADMIN_RULES, type ProxyRule } from "@/lib/adminRoutes";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-type Rule = { method: "GET" | "POST" | "PUT"; pattern: RegExp; public?: boolean };
+type Rule = ProxyRule;
 
 const RULES: Rule[] = [
   { method: "GET", pattern: /^me$/ },
@@ -52,6 +53,7 @@ const RULES: Rule[] = [
   { method: "PUT", pattern: /^bookmarks\/(questions\/\d{1,10}|exercises\/[a-z0-9-]{1,64})$/ },
   { method: "GET", pattern: /^feedback\/recent$/, public: true },
   { method: "GET", pattern: /^(languages|domains|health)$/, public: true },
+  ...ADMIN_RULES,
 ];
 
 const NO_STORE = { "Cache-Control": "no-store" };

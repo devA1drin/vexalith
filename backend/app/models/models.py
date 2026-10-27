@@ -451,3 +451,55 @@ class Bookmark(Base):
     note: Mapped[str] = mapped_column(String(200), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+# ----------------------------------------------------------------------------- admin dashboard (additive)
+
+class QuestionEdit(Base):
+    """An admin's change to a question. Seeding rewrites questions from code on every start,
+    so edits live here and are applied again after each seed."""
+
+    __tablename__ = "question_edits"
+
+    question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"), primary_key=True)
+    question_text: Mapped[str | None] = mapped_column(Text, nullable=True)  # the prompt without its task line
+    reference_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    key_idea: Mapped[str | None] = mapped_column(Text, nullable=True)
+    hidden: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class LearnerFlag(Base):
+    """Admin-set flags on a learner (separate from the learner's own choices)."""
+
+    __tablename__ = "learner_flags"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    board_hidden: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class FeedbackModeration(Base):
+    """Review state of one piece of product feedback."""
+
+    __tablename__ = "feedback_moderation"
+
+    feedback_id: Mapped[int] = mapped_column(ForeignKey("user_feedback.id"), primary_key=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    hidden: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class AdminAudit(Base):
+    """One admin action. The actor is kept by id and name (no foreign key) so the log
+    outlives deleted accounts; it never stores emails."""
+
+    __tablename__ = "admin_audit"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    actor_id: Mapped[int] = mapped_column(Integer, index=True)
+    actor_name: Mapped[str] = mapped_column(String(80), default="")
+    action: Mapped[str] = mapped_column(String(40), index=True)
+    target: Mapped[str] = mapped_column(String(120), default="")
+    details: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)

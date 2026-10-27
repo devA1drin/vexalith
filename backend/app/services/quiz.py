@@ -34,6 +34,7 @@ from app.models.models import (
 )
 from app.services import adaptive
 from app.services.review import key_idea, short_feedback
+from app.services.question_edits import hidden_ids
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,9 @@ def _pool(db: Session, scope: str, value: str) -> list[tuple[Question, SkillDoma
         .join(SkillDomain, SkillDomain.id == Question.domain_id)
         .filter(Question.source == "seed")
     )
+    hidden = hidden_ids(db)
+    if hidden:
+        query = query.filter(Question.id.notin_(hidden))
     if scope == "topic":
         query = query.filter(SkillDomain.slug == value)
     elif scope == "language":
@@ -113,6 +117,8 @@ def options(db: Session, user: User, now: datetime | None = None) -> dict:
         .filter(Question.source == "seed")
         .all()
     )
+    hidden = hidden_ids(db)
+    rows = [r for r in rows if r[0] not in hidden]
     topics: dict[str, list] = {}
     langs: dict[str, int] = {}
     for _qid, lang, slug, name in rows:

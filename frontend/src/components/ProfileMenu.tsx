@@ -30,6 +30,7 @@ export function ProfileMenu({ fallbackName, children }: { fallbackName: string; 
   const items = [
     { href: "/profile", label: "Profile" },
     { href: "/bookmarks", label: "Bookmarks" },
+    ...(profile?.is_admin ? [{ href: "/admin", label: "Admin" }] : []),
   ];
   return (
     <div ref={box} className="relative">

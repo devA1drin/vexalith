@@ -55,11 +55,16 @@ Browser ──► Next.js 15 (Vercel)                         FastAPI (Vercel Py
 | POST / GET | `/api/feedback` · `/api/feedback/mine` | JWT |
 | GET | `/api/feedback/recent` | public (no emails) |
 | GET | `/api/languages` · `/api/domains` · `/api/catalog` (question counts per language and kind, no content) | public |
+| GET | `/api/admin/me` · `/api/admin/overview` · `/api/admin/learners?q=&sort=&page=` · `/api/admin/questions?topic=&language=&difficulty=&kind=&status=&q=&sort=&page=` · `/api/admin/questions/{id}` · `/api/admin/exercises` · `/api/admin/feedback?status=&category=&rating=&q=` · `/api/admin/audit?action=&page=` | admin |
+| POST | `/api/admin/learners/{id}/board` `{hidden}` · `/api/admin/learners/{id}/reset-xp` `{confirm}` · `/api/admin/learners/{id}/delete` `{confirm}` (confirm = handle or id; never your own account) | admin |
+| POST | `/api/admin/questions` (new question) · `/api/admin/questions/{id}` `{question_text?, key_idea?, reference_answer?, check_only?}` · `/api/admin/questions/{id}/visibility` `{hidden}` · `/api/admin/style-check` | admin |
+| POST | `/api/admin/feedback/{id}/review` `{reviewed}` · `/api/admin/feedback/{id}/visibility` `{hidden}` · `/api/admin/feedback/{id}/delete` | admin |
 
 - `language` is one of `python`, `javascript`, `php`, `cpp` (C++), `html`, `css` or `general`. `focus` is optional and currently accepts only `fundamentals`.
 - Review and quiz rules: an item is fixed by a right answer after a Review retry; it returns once `CONFIRM_DAYS` (3) later. Quizzes store `started_at` / `deadline_at` on the server and accept answers for 15 s after the deadline (`GRACE_S`) to absorb the auto-submit; later reads finish the quiz automatically. While an "at the end" quiz is running, its answers are left out of XP, Review and path progress so the header's XP toast can't give results away. Tables `quiz_sessions`, `quiz_answers` and `review_retries` are created on startup (additive).
 - Profile and bookmarks: tables `user_settings` (one row per user) and `bookmarks` (unique per user and item) are created on startup (additive). Handles are unique ignoring case, and reserved words are refused. Names, handles, bios and notes are stripped of control characters and extra spaces before checking. A chosen mark replaces the sign-in photo on the leaderboard and feedback wall; emails are never returned. Bookmarks don't reveal answers from an "at the end" quiz that is still running.
 - `scripts/smoke_api.sh` mints a test token from `BACKEND_JWT_SECRET` and runs the whole flow against a running API.
+- Admin dashboard: "admin" means signed in with a `provider:account_id` that is listed in `ADMIN_IDENTITIES` (not matched by email, since emails can change or be shared). Other users get 403 and signed-out requests get 401. Every change is written to `admin_audit`. Tables `question_edits` (edits and hidden flag, applied again after each reseed), `learner_flags` (leaderboard hide), `feedback_moderation` and `admin_audit` are created on startup (additive). Hidden questions are left out of Practice, recommendations, quizzes, paths, the daily question and `/api/catalog`. Deleting a learner uses the same purge service as `purge-users`, which covers every table that belongs to a user. Reset XP sets their XP to zero but keeps their badges and history.
 - `POST /api/admin/purge-users` deletes specific users (by `provider:account_id`) and everything they own. It returns 404 unless the sensitive `ADMIN_TOKEN` env var (32+ characters) is set, and it needs that token in the `X-Admin-Token` header. Requests default to a dry run. Remove `ADMIN_TOKEN` after use.
 
 ## Environment variables
@@ -73,6 +78,7 @@ All variables are listed with comments in [`.env.example`](../.env.example).
 | `CORS_ORIGINS` | backend | Allowed browser origins |
 | `XAI_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | backend | Optional model grader |
 | `ADMIN_TOKEN` | backend | Optional; enables the purge endpoint while set |
+| `ADMIN_IDENTITIES` | backend | Comma-separated `provider:account_id` list (e.g. `github:12345678`) of who can open the admin dashboard; empty = nobody |
 | `AUTH_SECRET` | frontend | Encrypts Auth.js sessions |
 | `AUTH_URL`, `NEXT_PUBLIC_SITE_URL` | frontend | Public site URL |
 | `BACKEND_URL` | frontend | Where the server-side proxy sends API calls |

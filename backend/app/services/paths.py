@@ -39,6 +39,7 @@ from app.models.models import (
     User,
 )
 from app.services import adaptive
+from app.services.question_edits import hidden_ids
 
 STEP_XP = 25
 PATH_XP = 100
@@ -66,7 +67,8 @@ def _catalog(db: Session) -> list[tuple[int, str, str, str]]:
         .filter(Question.source == "seed")
         .all()
     )
-    return [(qid, lang, slug, _level(diff)) for qid, lang, slug, diff in rows]
+    hidden = hidden_ids(db)
+    return [(qid, lang, slug, _level(diff)) for qid, lang, slug, diff in rows if qid not in hidden]
 
 
 def pool_ids(step: Step, catalog: list[tuple[int, str, str, str]]) -> list[int]:

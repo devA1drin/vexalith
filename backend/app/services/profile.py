@@ -183,6 +183,12 @@ def _iso(dt: datetime | None) -> datetime | None:
     return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
 
 
+def _is_admin(user: User) -> bool:
+    from app.services.admin import is_admin
+
+    return is_admin(user)
+
+
 def profile_out(db: Session, user: User) -> dict:
     s = get_settings(db, user)
     p = xp.ensure_profile(db, user)
@@ -203,6 +209,7 @@ def profile_out(db: Session, user: User) -> dict:
         "visibility": p.visibility,
         "leaderboard_name": None if p.visibility == "hidden" else xp.public_name(p, user, s.display_name),
         "provider": user.auth_provider,
+        "is_admin": _is_admin(user),
         "joined_at": _iso(user.created_at),
         "limits": {"name": [NAME_MIN, NAME_MAX], "handle": [HANDLE_MIN, HANDLE_MAX], "bio": BIO_MAX},
     }
